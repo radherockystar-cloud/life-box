@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@layer base {
+  *, body, input, textarea, select, button {
+    font-family: system-ui, -apple-system, sans-serif !important;
+    font-weight: 800 !important;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+.glow-rose {
+  box-shadow: 0 10px 25px -5px rgba(244, 63, 94, 0.4);
+}

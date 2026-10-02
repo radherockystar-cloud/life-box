@@ -1,0 +1,49 @@
+/* 3D Next-Level Slider Styling */
+.slider-container-3d {
+  transform: perspective(1000px) rotateX(2deg);
+  transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 20px 40px -15px rgba(244, 63, 94, 0.4), 
+              0 0 20px rgba(255, 255, 255, 0.2) inset;
+}
+
+.slider-container-3d:hover {
+  transform: perspective(1000px) rotateX(0deg) scale(1.02);
+}
+
+.slider-card-inner {
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Premium 3D Gradients */
+.slider-gradient-1 {
+  background: linear-gradient(135deg, #f43f5e 0%, #ec4899 50%, #be123c 100%);
+}
+
+.slider-gradient-2 {
+  background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+}
+
+.slider-gradient-3 {
+  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #f43f5e 100%);
+}
+
+/* Glowing Text Effect */
+.text-shadow-glow {
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
+/* Smooth Slide Text Animation */
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slider-content-anim {
+  animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
