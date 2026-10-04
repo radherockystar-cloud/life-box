@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Menu, Search, Lock, X } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
 import NavigationDrawer from './components/NavigationDrawer';
 import BottomNav from './components/BottomNav';
 import HomeScreen from './screens/HomeScreen';
@@ -54,6 +56,51 @@ export default function App() {
   useBackHandler(isSearchActive, () => { setGlobalSearchQuery(''); setIsSearchActive(false); });
 
   useEffect(() => {
+    let lastBackTime = 0;
+    let toastTimer;
+
+    // ===== Installed Android app (Capacitor APK): use the phone's Back button event =====
+    if (Capacitor.isNativePlatform()) {
+      let listenerHandle = null;
+      let removed = false;
+
+      const onNativeBack = () => {
+        // 1) Close the top-most open screen / modal / form
+        if (runBackHandler()) return;
+
+        const { activeTab, isSubAppOpen } = stateRef.current;
+
+        // 2) Close the open sub-app (Notes, Goals etc.)
+        if (isSubAppOpen) { setIsSubAppOpen(false); return; }
+
+        // 3) Go back to Home tab
+        if (activeTab !== 'home') { setActiveTab('home'); return; }
+
+        // 4) On Home: press Back twice to exit
+        const now = Date.now();
+        if (now - lastBackTime < 2000) {
+          CapApp.exitApp();
+          return;
+        }
+        lastBackTime = now;
+        setShowExitToast(true);
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => setShowExitToast(false), 2000);
+      };
+
+      CapApp.addListener('backButton', onNativeBack).then((handle) => {
+        if (removed) handle.remove();
+        else listenerHandle = handle;
+      });
+
+      return () => {
+        removed = true;
+        if (listenerHandle) listenerHandle.remove();
+        clearTimeout(toastTimer);
+      };
+    }
+
+    // ===== Browser / local server: use the browser history =====
     // History layout: [ ...browser pages, BASE (this app), GUARD ]
     // The user always sits on GUARD. Back moves to BASE (popstate), we handle it,
     // then move forward to GUARD again. No new history entries are created
@@ -72,9 +119,7 @@ export default function App() {
       }, 120);
     };
 
-    let lastBackTime = 0;
     let exiting = false;
-    let toastTimer;
 
     const onPopState = (e) => {
       if (exiting) return;
