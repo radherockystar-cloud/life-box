@@ -1,25 +1,28 @@
-import { useEffect } from 'react';
-import { App } from '@capacitor/app';
+import { useEffect, useRef } from 'react';
 
-export default function useBackHandler(onBack, activeCondition) {
+const handlers = [];
+
+export function useBackHandler(isOpen, onClose) {
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
   useEffect(() => {
-    let handleBack;
-    try {
-      handleBack = App.addListener('backButton', (data) => {
-        if (activeCondition) {
-          onBack();
-        } else {
-          App.exitApp();
-        }
-      });
-    } catch (e) {
-      // Not in Capacitor environment
-    }
-
+    if (!isOpen) return;
+    const fn = () => closeRef.current();
+    handlers.push(fn);
     return () => {
-      if (handleBack) {
-        handleBack.remove();
-      }
+      const i = handlers.lastIndexOf(fn);
+      if (i > -1) handlers.splice(i, 1);
     };
-  }, [onBack, activeCondition]);
+  }, [isOpen]);
 }
+
+export function runBackHandler() {
+  const fn = handlers[handlers.length - 1];
+  if (!fn) return false;
+  fn();
+  return true;
+}
+
+// Default export fallback for compatibility
+export default useBackHandler;
