@@ -1,29 +1,25 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import { App } from '@capacitor/app';
 
-// Stack of "close" functions for everything currently open (modal, form, sub-screen...)
-const handlers = [];
-
-// Use inside any component/screen that can be "opened" and should close on Back.
-// Example: useBackHandler(showForm, () => setShowForm(false));
-export function useBackHandler(isOpen, onClose) {
-  const closeRef = useRef(onClose);
-  closeRef.current = onClose;
-
+export default function useBackHandler(onBack, activeCondition) {
   useEffect(() => {
-    if (!isOpen) return;
-    const fn = () => closeRef.current();
-    handlers.push(fn);
-    return () => {
-      const i = handlers.lastIndexOf(fn);
-      if (i > -1) handlers.splice(i, 1);
-    };
-  }, [isOpen]);
-}
+    let handleBack;
+    try {
+      handleBack = App.addListener('backButton', (data) => {
+        if (activeCondition) {
+          onBack();
+        } else {
+          App.exitApp();
+        }
+      });
+    } catch (e) {
+      // Not in Capacitor environment
+    }
 
-// Called by App.jsx on the Back button. Returns true if something was closed.
-export function runBackHandler() {
-  const fn = handlers[handlers.length - 1];
-  if (!fn) return false;
-  fn();
-  return true;
+    return () => {
+      if (handleBack) {
+        handleBack.remove();
+      }
+    };
+  }, [onBack, activeCondition]);
 }
