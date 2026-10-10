@@ -1,248 +1,280 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Plus, Clock, ArrowLeft, Sparkles, Trash2, BellRing, CheckCircle2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { ChevronLeft, ChevronRight, Plus, Lock } from 'lucide-react';
+import { useBackHandler } from '../../utils/useBackHandler';
+import CalendarGrid from './CalendarGrid';
+import AddPlanForm from './AddPlanForm';
+import MyPlansList from './MyPlansList';
+import { getFestivalsForDate, getFestivalsInMonth, getNextFestival, getDayEmoji, toDateStr, dateFromStr } from './festivalsData';
+import { loadPlans, savePlans, addOrUpdatePlan, deletePlan } from './plansStorage';
+import { requestSync } from './reminderService';
 
-export default function PlannerTab({ onBack }) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [plans, setPlans] = useState(() => {
-    const saved = localStorage.getItem('lifebox_planner_plans');
-    return saved ? JSON.parse(saved) : [
-      { id: 1, date: '2026-09-20', title: 'Important Project Deadline', time: '10:00' }
-    ];
-  });
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-  const [activeSlide, setActiveSlide] = useState(0);
-  const [selectedDateForModal, setSelectedDateForModal] = useState(null);
-  const [planTitle, setPlanTitle] = useState('');
-  const [planTime, setPlanTime] = useState('09:00');
+const AURORA = 'linear-gradient(160deg, #4f46e5 0%, #7c3aed 38%, #db2777 75%, #f59e0b 100%)';
 
-  useEffect(() => {
-    localStorage.setItem('lifebox_planner_plans', JSON.stringify(plans));
-  }, [plans]);
+const glass = {
+  background: 'linear-gradient(145deg, rgba(255,255,255,0.28), rgba(255,255,255,0.09))',
+  border: '1px solid rgba(255,255,255,0.45)',
+  boxShadow: '0 12px 26px rgba(30,20,100,0.28), inset 0 1px 0 rgba(255,255,255,0.6)',
+  backdropFilter: 'blur(14px)',
+  WebkitBackdropFilter: 'blur(14px)',
+};
 
-  // Rotate banner slides automatically if multiple upcoming plans exist
-  useEffect(() => {
-    if (plans.length <= 1) return;
-    const timer = setInterval(() => {
-      setActiveSlide(prev => (prev + 1) % plans.length);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [plans.length]);
+const roundButton = {
+  ...glass,
+  width: '42px',
+  height: '42px',
+  borderRadius: '15px',
+  color: '#ffffff',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+};
 
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
+const daysText = (days) => (days === 0 ? 'Today!' : days === 1 ? 'Tomorrow' : days > 1 ? `In ${days} days` : 'Passed');
 
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  
-  const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
-  const firstDayIndex = new Date(year, month, 1).getDay();
-  const totalDays = getDaysInMonth(year, month);
+const prettyShort = (dateStr) => {
+  const d = dateFromStr(dateStr);
+  return `${WEEKDAY_NAMES[d.getDay()].slice(0, 3)}, ${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`;
+};
 
-  const handleSavePlan = () => {
-    if (!planTitle.trim() || !selectedDateForModal) return;
+export default function PlannerTab() {
+  const now = new Date();
+  const todayStr = toDateStr(now);
 
-    const newPlan = {
-      id: Date.now(),
-      date: selectedDateForModal,
-      title: planTitle,
-      time: planTime
-    };
+  const [viewYear, setViewYear] = useState(now.getFullYear());
+  const [viewMonth, setViewMonth] = useState(now.getMonth());
 
-    setPlans([...plans, newPlan]);
-    setPlanTitle('');
-    setSelectedDateForModal(null);
+  // Plans are only used by the "My Plans" page. The calendar never shows them.
+  const [plans, setPlans] = useState(loadPlans);
+
+  const [selectedDate, setSelectedDate] = useState(null); // opens the day sheet
+  const [showForm, setShowForm] = useState(false);
+  const [editingPlan, setEditingPlan] = useState(null);
+  const [formDate, setFormDate] = useState(null);
+  const [showList, setShowList] = useState(false);
+
+  const touchStart = useRef(null);
+
+  // ---------- Back button ----------
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingPlan(null);
   };
 
-  const deletePlan = (id) => {
-    setPlans(plans.filter(p => p.id !== id));
+  useBackHandler(showList, () => setShowList(false));
+  useBackHandler(selectedDate !== null, () => setSelectedDate(null));
+  useBackHandler(showForm, closeForm);
+
+  // ---------- Month navigation ----------
+  const shiftMonth = (delta) => {
+    const next = new Date(viewYear, viewMonth + delta, 1);
+    setViewYear(next.getFullYear());
+    setViewMonth(next.getMonth());
   };
 
-  // Calculate days remaining for upcoming plans compared to today
-  const todayStr = new Date().toISOString().split('T')[0];
-  const upcomingPlans = plans.filter(p => p.date >= todayStr).sort((a, b) => new Date(a.date) - new Date(b.date));
-
-  const currentBannerPlan = upcomingPlans[activeSlide] || upcomingPlans[0];
-
-  const getDaysLeft = (targetDateStr) => {
-    const today = new Date(todayStr);
-    const target = new Date(targetDateStr);
-    const diffTime = target - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+  const goToday = () => {
+    setViewYear(now.getFullYear());
+    setViewMonth(now.getMonth());
   };
+
+  const onTouchStart = (e) => {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const onTouchEnd = (e) => {
+    if (!touchStart.current) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.current.x;
+    const dy = t.clientY - touchStart.current.y;
+    touchStart.current = null;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) shiftMonth(dx < 0 ? 1 : -1);
+  };
+
+  // ---------- Plans ----------
+  const commitPlans = (updated) => {
+    if (!savePlans(updated)) {
+      alert('Phone storage is full, so this change could not be saved.');
+      return false;
+    }
+    setPlans(updated);
+    requestSync(); // update the reminders
+    return true;
+  };
+
+  const openNewPlan = (dateStr) => {
+    setSelectedDate(null);
+    setEditingPlan(null);
+    setFormDate(dateStr || todayStr);
+    setShowForm(true);
+  };
+
+  const openEditPlan = (plan) => {
+    setEditingPlan(plan);
+    setFormDate(plan.date);
+    setShowForm(true);
+  };
+
+  const handleSavePlan = (plan) => {
+    if (commitPlans(addOrUpdatePlan(plans, plan))) closeForm();
+  };
+
+  const handleDeletePlan = (id) => {
+    commitPlans(deletePlan(plans, id));
+  };
+
+  // ---------- What to show ----------
+  const nextFestival = getNextFestival(now);
+  const monthFestivals = getFestivalsInMonth(viewYear, viewMonth);
+  const selectedFestivals = selectedDate ? getFestivalsForDate(selectedDate) : [];
+  const isCurrentMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth();
 
   return (
-    <div className="space-y-5 pb-28 animate-in fade-in duration-200">
-      
-      {/* Top Header */}
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-3">
-          {onBack && (
-            <button onClick={onBack} className="p-2.5 rounded-2xl bg-white border border-sky-200 text-sky-600 shadow-md cursor-pointer flex items-center justify-center">
-              <ArrowLeft size={18} />
-            </button>
-          )}
-          <div>
-            <h2 className="text-xl font-black text-gray-900 tracking-wide">Smart Planner</h2>
-            <p className="text-xs font-bold text-sky-600 mt-0.5">📅 Countdown & Date-Wise Vault</p>
-          </div>
-        </div>
-        <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-500 flex items-center justify-center shadow-[0_0_15px_rgba(14,165,233,0.5)] text-white">
-          <CalendarIcon size={20} />
-        </div>
-      </div>
+    <div className="pb-28">
+      <div style={{ position: 'relative', borderRadius: '34px', overflow: 'hidden', background: AURORA, padding: '16px 14px 22px', color: '#ffffff' }}>
+        {/* Soft colour blobs behind the glass */}
+        <div style={{ position: 'absolute', top: '-60px', right: '-50px', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(56,189,248,0.55)', filter: 'blur(50px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: '120px', left: '-70px', width: '210px', height: '210px', borderRadius: '50%', background: 'rgba(251,113,133,0.5)', filter: 'blur(55px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: '-60px', right: '-40px', width: '190px', height: '190px', borderRadius: '50%', background: 'rgba(253,224,71,0.45)', filter: 'blur(55px)', pointerEvents: 'none' }} />
 
-      {/* Dynamic Countdown Banner (Top Highlight) */}
-      {upcomingPlans.length > 0 && currentBannerPlan ? (
-        <div className="relative w-full rounded-[30px] overflow-hidden bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 p-5 text-white shadow-xl flex flex-col justify-between">
-          <div className="flex justify-between items-center z-10 mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full backdrop-blur-md border border-white/30 flex items-center gap-1">
-              <Sparkles size={12} className="text-yellow-300 animate-spin" /> Upcoming Plan Alert
-            </span>
-            <span className="text-xs font-black bg-white/20 px-2.5 py-1 rounded-xl backdrop-blur-md">
-              ⏳ {getDaysLeft(currentBannerPlan.date) === 0 ? 'Today!' : `${getDaysLeft(currentBannerPlan.date)} day(s) left`}
-            </span>
-          </div>
-
-          <div className="z-10 space-y-1">
-            <h3 className="text-sm font-black tracking-wide">📌 {currentBannerPlan.title}</h3>
-            <p className="text-[11px] font-bold text-white/9gh">Scheduled on: {currentBannerPlan.date} at {currentBannerPlan.time}</p>
-          </div>
-
-          {/* Pagination Indicators for Multiple Plans */}
-          {upcomingPlans.length > 1 && (
-            <div className="flex gap-1.5 justify-center mt-3 z-10">
-              {upcomingPlans.map((_, idx) => (
-                <div key={idx} className={`h-1.5 rounded-full transition-all duration-300 ${idx === activeSlide ? 'w-6 bg-white' : 'w-1.5 bg-white/40'}`} />
-              ))}
+        <div style={{ position: 'relative' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <div>
+              <h2 style={{ fontSize: '21px', fontWeight: 900, letterSpacing: '0.02em' }}>Planner</h2>
+              <p style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', marginTop: '1px' }}>Calendar, festivals & private plans</p>
             </div>
-          )}
-
-          <div className="absolute -right-6 -bottom-6 w-28 h-28 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
-        </div>
-      ) : (
-        <div className="bg-sky-50 border border-sky-200 p-4 rounded-2xl text-center">
-          <p className="text-xs font-bold text-sky-700">No upcoming plans! Tap any date below to add one.</p>
-        </div>
-      )}
-
-      {/* Month Selector Header */}
-      <div className="flex items-center justify-between bg-white border border-sky-100 p-4 rounded-2xl shadow-sm">
-        <button 
-          onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-          className="px-3 py-1.5 rounded-xl bg-sky-50 text-sky-700 text-xs font-black cursor-pointer"
-        >
-          Prev
-        </button>
-        <h3 className="text-sm font-black text-gray-900">{monthNames[month]} {year}</h3>
-        <button 
-          onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-          className="px-3 py-1.5 rounded-xl bg-sky-50 text-sky-700 text-xs font-black cursor-pointer"
-        >
-          Next
-        </button>
-      </div>
-
-      {/* Calendar Grid */}
-      <div className="bg-white border-2 border-sky-100 rounded-[28px] p-4 shadow-sm">
-        <div className="grid grid-cols-7 gap-2 mb-2 text-center">
-          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
-            <span key={d} className="text-[10px] font-black text-sky-600 uppercase">{d}</span>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-7 gap-2">
-          {Array.from({ length: firstDayIndex }).map((_, i) => (
-            <div key={`empty-${i}`} />
-          ))}
-
-          {Array.from({ length: totalDays }).map((_, i) => {
-            const dayNum = i + 1;
-            const mStr = String(month + 1).padStart(2, '0');
-            const dStr = String(dayNum).padStart(2, '0');
-            const dateStr = `${year}-${mStr}-${dStr}`;
-            
-            const dayPlans = plans.filter(p => p.date === dateStr);
-            const isToday = dateStr === todayStr;
-
-            return (
-              <div 
-                key={dayNum} 
-                className={`min-h-[70px] rounded-2xl p-2 border flex flex-col justify-between transition-all relative group ${
-                  isToday 
-                    ? 'border-sky-500 bg-sky-50/70 shadow-md ring-2 ring-sky-200' 
-                    : dayPlans.length > 0 
-                    ? 'border-indigo-300 bg-indigo-50/40' 
-                    : 'border-gray-100 bg-gray-50/50 hover:border-sky-200'
-                }`}
-              >
-                <div className="flex justify-between items-center">
-                  <span className={`text-xs font-black ${isToday ? 'text-sky-700' : 'text-gray-800'}`}>{dayNum}</span>
-                  <button 
-                    onClick={() => setSelectedDateForModal(dateStr)}
-                    className="w-5 h-5 rounded-full bg-sky-500 text-white flex items-center justify-center text-[10px] font-black shadow-sm cursor-pointer hover:scale-110 transition-transform"
-                    title="Add Plan"
-                  >
-                    <Plus size={12} className="stroke-[3]" />
-                  </button>
-                </div>
-
-                {/* Plans Indicator Dots or Badges */}
-                <div className="space-y-1 mt-1 overflow-y-auto max-h-[35px]">
-                  {dayPlans.map(p => (
-                    <div key={p.id} className="bg-indigo-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md truncate flex items-center justify-between shadow-sm">
-                      <span className="truncate">{p.title}</span>
-                      <button onClick={() => deletePlan(p.id)} className="text-white/80 hover:text-rose-200 ml-1">×</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Add Plan Modal */}
-      {selectedDateForModal && (
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-5">
-          <div className="bg-white rounded-[28px] p-5 w-full max-w-sm space-y-4 shadow-2xl animate-in zoom-in-95 duration-200 border-2 border-sky-100">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-black text-gray-900">Add Plan for {selectedDateForModal}</h3>
-              <button onClick={() => setSelectedDateForModal(null)} className="text-gray-400 font-bold text-base cursor-pointer">✕</button>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-[10px] font-black text-sky-700 uppercase tracking-wide">Plan Title / Event</label>
-                <input 
-                  type="text"
-                  placeholder="e.g., Project Presentation"
-                  value={planTitle}
-                  onChange={(e) => setPlanTitle(e.target.value)}
-                  className="w-full bg-sky-50/50 border-2 border-sky-200 rounded-xl p-3 text-xs font-black text-gray-900 outline-none mt-1"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black text-sky-700 uppercase tracking-wide">Time</label>
-                <input 
-                  type="time"
-                  value={planTime}
-                  onChange={(e) => setPlanTime(e.target.value)}
-                  className="w-full bg-sky-50/50 border-2 border-sky-200 rounded-xl p-3 text-xs font-black text-gray-900 outline-none mt-1"
-                />
-              </div>
-
-              <button 
-                onClick={handleSavePlan}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-black text-xs shadow-lg cursor-pointer border-none"
-              >
-                Save Plan ✅
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button type="button" onClick={() => setShowList(true)} style={roundButton} aria-label="My Plans" title="My Plans">
+                <Lock size={17} />
+              </button>
+              <button type="button" onClick={() => openNewPlan(null)} style={{ ...roundButton, background: 'linear-gradient(145deg, #ffffff, #ede9fe)', color: '#6d28d9', border: '1px solid #fff' }} aria-label="Add plan" title="Add plan">
+                <Plus size={20} strokeWidth={3} />
               </button>
             </div>
           </div>
+
+          {/* Next festival */}
+          {nextFestival && (
+            <button
+              type="button"
+              onClick={() => {
+                const d = dateFromStr(nextFestival.dateStr);
+                setViewYear(d.getFullYear());
+                setViewMonth(d.getMonth());
+                setSelectedDate(nextFestival.dateStr);
+              }}
+              style={{ ...glass, width: '100%', borderRadius: '24px', padding: '12px 14px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '12px', color: '#fff', cursor: 'pointer', textAlign: 'left' }}
+            >
+              <span style={{ fontSize: '30px', filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.3))' }}>{nextFestival.festival.emoji}</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: '9.5px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.8)' }}>Next festival</span>
+                <span style={{ display: 'block', fontSize: '15px', fontWeight: 900, marginTop: '1px' }}>{nextFestival.festival.names.en}</span>
+                <span style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>{prettyShort(nextFestival.dateStr)}</span>
+              </span>
+              <span style={{ fontSize: '11px', fontWeight: 900, padding: '6px 11px', borderRadius: '12px', background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.5)' }}>
+                {daysText(nextFestival.daysLeft)}
+              </span>
+            </button>
+          )}
+
+          {/* Month selector */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <button type="button" onClick={() => shiftMonth(-1)} style={{ ...roundButton, width: '38px', height: '38px', borderRadius: '13px' }} aria-label="Previous month">
+              <ChevronLeft size={18} />
+            </button>
+            <div style={{ textAlign: 'center' }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 900 }}>{MONTH_NAMES[viewMonth]} {viewYear}</h3>
+              {!isCurrentMonth && (
+                <button type="button" onClick={goToday} style={{ marginTop: '3px', fontSize: '10px', fontWeight: 900, padding: '3px 10px', borderRadius: '10px', background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.5)', color: '#fff', cursor: 'pointer' }}>
+                  Back to today
+                </button>
+              )}
+            </div>
+            <button type="button" onClick={() => shiftMonth(1)} style={{ ...roundButton, width: '38px', height: '38px', borderRadius: '13px' }} aria-label="Next month">
+              <ChevronRight size={18} />
+            </button>
+          </div>
+
+          {/* Calendar (swipe left / right to change month) */}
+          <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+            <CalendarGrid year={viewYear} month={viewMonth} todayStr={todayStr} selectedDateStr={selectedDate} onSelectDate={setSelectedDate} />
+          </div>
+
+          {/* Festivals this month */}
+          <div style={{ ...glass, borderRadius: '26px', padding: '14px', marginTop: '18px' }}>
+            <h4 style={{ fontSize: '13px', fontWeight: 900, marginBottom: '8px' }}>🎊 Festivals in {MONTH_NAMES[viewMonth]}</h4>
+            {monthFestivals.length === 0 ? (
+              <p style={{ fontSize: '11.5px', fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>No festival listed for this month.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {monthFestivals.map(({ dateStr, festivals }) =>
+                  festivals.map((f) => (
+                    <button
+                      key={`${dateStr}-${f.id}`}
+                      type="button"
+                      onClick={() => setSelectedDate(dateStr)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '14px', background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', cursor: 'pointer', textAlign: 'left', opacity: dateStr < todayStr ? 0.6 : 1 }}
+                    >
+                      <span style={{ fontSize: '20px' }}>{f.emoji}</span>
+                      <span style={{ flex: 1, fontSize: '12.5px', fontWeight: 900 }}>{f.names.en}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.85)' }}>{prettyShort(dateStr)}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ---------- Day sheet ---------- */}
+      {selectedDate && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9050, display: 'flex', alignItems: 'flex-end' }}>
+          <div onClick={() => setSelectedDate(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(15,10,50,0.55)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)' }} />
+          <div style={{ position: 'relative', width: '100%', borderRadius: '32px 32px 0 0', padding: '20px 18px 26px', background: 'linear-gradient(160deg, rgba(79,70,229,0.96), rgba(124,58,237,0.96) 55%, rgba(190,40,120,0.96))', border: '1px solid rgba(255,255,255,0.35)', boxShadow: '0 -20px 50px rgba(20,10,80,0.5), inset 0 1px 0 rgba(255,255,255,0.5)', color: '#fff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
+              <span style={{ fontSize: '42px', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.35))' }}>{getDayEmoji(selectedDate)}</span>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 900 }}>
+                  {dateFromStr(selectedDate).getDate()} {MONTH_NAMES[dateFromStr(selectedDate).getMonth()]} {dateFromStr(selectedDate).getFullYear()}
+                </h3>
+                <p style={{ fontSize: '11.5px', fontWeight: 800, color: 'rgba(255,255,255,0.85)' }}>{WEEKDAY_NAMES[dateFromStr(selectedDate).getDay()]}</p>
+              </div>
+            </div>
+
+            {selectedFestivals.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+                {selectedFestivals.map((f) => (
+                  <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 13px', borderRadius: '18px', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.4)' }}>
+                    <span style={{ fontSize: '24px' }}>{f.emoji}</span>
+                    <div>
+                      <p style={{ fontSize: '14px', fontWeight: 900 }}>{f.names.en}</p>
+                      <p style={{ fontSize: '10.5px', fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>Festival / special day</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.85)', marginBottom: '14px' }}>No festival on this day.</p>
+            )}
+
+            <button type="button" onClick={() => openNewPlan(selectedDate)} style={{ width: '100%', padding: '13px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.7)', background: 'linear-gradient(135deg, #ffffff, #ede9fe)', color: '#4c1d95', fontSize: '13.5px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 10px 24px rgba(20,10,80,0.35)' }}>
+              + Add a plan for this day
+            </button>
+          </div>
         </div>
       )}
 
+      {/* ---------- My Plans (private) ---------- */}
+      {showList && <MyPlansList plans={plans} onClose={() => setShowList(false)} onAdd={() => openNewPlan(null)} onEdit={openEditPlan} onDelete={handleDeletePlan} />}
+
+      {/* ---------- Add / edit form ---------- */}
+      {showForm && <AddPlanForm plan={editingPlan} defaultDate={formDate} onSave={handleSavePlan} onClose={closeForm} />}
     </div>
   );
 }

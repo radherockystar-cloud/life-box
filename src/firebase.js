@@ -6,7 +6,7 @@ import { getFirestore } from "firebase/firestore";
 const firebaseConfig = {
   apiKey: "AIzaSyB0ChpmIn9CPUmafTVQXY4tcUnFfT01owc",
   authDomain: "Lifebox-44c35.firebaseapp.com",
-  projectId: "Lifebox-44c35",
+  projectId: "lifebox-44c35",
   storageBucket: "Lifebox-44c35.firebasestorage.app",
   messagingSenderId: "955510250696",
   appId: "1:955510250696:web:b7490c9b8aa402237699fd",

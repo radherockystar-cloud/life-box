@@ -1,7 +1,10 @@
 import { useEffect, useRef } from 'react';
 
+// Stack of "close" functions for everything currently open (modal, form, sub-screen...)
 const handlers = [];
 
+// Use inside any component/screen that can be "opened" and should close on Back.
+// Example: useBackHandler(showForm, () => setShowForm(false));
 export function useBackHandler(isOpen, onClose) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -17,12 +20,10 @@ export function useBackHandler(isOpen, onClose) {
   }, [isOpen]);
 }
 
+// Called by App.jsx on the Back button. Returns true if something was closed.
 export function runBackHandler() {
   const fn = handlers[handlers.length - 1];
   if (!fn) return false;
   fn();
   return true;
 }
-
-// Default export fallback for compatibility
-export default useBackHandler;

@@ -11,6 +11,10 @@ import PlannerTab from './tabs/planner/PlannerTab';
 import MeTab from './tabs/me/MeTab';
 import { translations } from './utils/translations';
 import { useBackHandler, runBackHandler } from './utils/useBackHandler';
+import { requestSync } from './tabs/planner/reminderService';
+import './tabs/people/trips/tripReminders';
+import './utils/autoNotificationSources';
+import TripInviteHandler from './tabs/people/trips/TripInviteHandler';
 
 export default function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -43,6 +47,19 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('newlife_lang', currentLang);
   }, [currentLang]);
+
+  // ---------- PLANNER NOTIFICATIONS ----------
+  // Festival greetings + plan reminders are set again at app start and whenever the language changes
+  useEffect(() => {
+    requestSync(1500);
+  }, [currentLang]);
+
+  // ...and when something is restored from the Bin
+  useEffect(() => {
+    const resync = () => requestSync(1500);
+    window.addEventListener('newlife-vault-changed', resync);
+    return () => window.removeEventListener('newlife-vault-changed', resync);
+  }, []);
 
   // ---------- BACK BUTTON HANDLING ----------
   const [showExitToast, setShowExitToast] = useState(false);
@@ -307,7 +324,7 @@ export default function App() {
       <main style={{ flex: 1, padding: '16px', overflowY: 'auto', position: 'relative' }}>
         {activeTab === 'home' && <HomeScreen currentLang={currentLang} onSubAppToggle={setIsSubAppOpen} searchQuery={globalSearchQuery} />}
         {activeTab === 'memories' && <MemoriesScreen />}
-        {activeTab === 'people' && <PeopleTab />}
+        {activeTab === 'people' && <PeopleTab onGoToLogin={() => setActiveTab('me')} />}
         {activeTab === 'planner' && <PlannerTab />}
         {activeTab === 'me' && <MeTab />}
       </main>
@@ -329,6 +346,9 @@ export default function App() {
         currentLang={currentLang}
         setLang={setLang}
       />
+      {/* Trip invite links: opens the Accept / Reject sheet */}
+      <TripInviteHandler onGoToLogin={() => setActiveTab('me')} onGoToPeople={() => setActiveTab('people')} />
+
       {showExitToast && (
         <div style={{ position: 'absolute', bottom: '90px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(17,24,39,0.9)', color: '#fff', padding: '8px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', zIndex: 100, whiteSpace: 'nowrap' }}>
           Press back again to exit

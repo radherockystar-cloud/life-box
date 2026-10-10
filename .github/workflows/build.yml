@@ -26,6 +26,9 @@ jobs:
     - name: Sync Capacitor Android
       run: npx cap sync android
 
+    - name: Add invite link and permissions to the Android manifest
+      run: node scripts/patch-android-manifest.mjs
+
     - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
