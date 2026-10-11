@@ -25,6 +25,140 @@ const emptyForm = () => ({ title: '', actionTime: '06:35', alertTime: '06:00', s
 
 /* ---------------------------- screen ---------------------------- */
 
+/* ---------------------------- 3D glowing theme: Pink + Purple + White (CSS) ---------------------------- */
+
+const THEME_CSS = `
+/* ====== Life Box Goals : 3D glowing theme  |  Pink + Purple + White ======
+   Rang badalne ho to sirf yeh CSS badlo. Class naam "gx-" se shuru hote hain. */
+.gx-bg{
+  background:
+    radial-gradient(90% 40% at 10% 0%,rgba(255,255,255,.24) 0%,transparent 60%),
+    radial-gradient(80% 45% at 100% 30%,rgba(255,95,184,.40) 0%,transparent 62%),
+    radial-gradient(90% 50% at 0% 72%,rgba(124,58,237,.55) 0%,transparent 65%),
+    linear-gradient(172deg,#3b1db8 0%,#6a27d6 30%,#a321b5 62%,#e04a86 88%,#f4975f 100%);}
+.gx-root{position:relative;min-height:100vh;overflow:hidden;border-radius:28px;padding:16px 16px 112px;color:#fff;}
+.gx-orb{position:absolute;border-radius:9999px;filter:blur(50px);pointer-events:none;animation:gx-float 9s ease-in-out infinite;}
+.gx-orb-a{top:-60px;right:-40px;width:230px;height:230px;background:rgba(255,95,184,.45);}
+.gx-orb-b{top:330px;left:-80px;width:250px;height:250px;background:rgba(255,255,255,.20);animation-delay:-4s;}
+.gx-title{font-weight:800;letter-spacing:-.02em;text-shadow:0 0 20px rgba(255,255,255,.45),0 2px 0 rgba(40,0,90,.35);}
+.gx-muted{color:#e0d3ff;}
+
+.gx-icon{display:flex;align-items:center;justify-content:center;flex-shrink:0;height:42px;width:42px;border-radius:15px;color:#fff;
+  background:linear-gradient(160deg,rgba(255,255,255,.40),rgba(255,255,255,.10));border:1px solid rgba(255,255,255,.42);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -4px 8px rgba(60,10,120,.28),0 8px 18px -6px rgba(30,5,80,.6),0 0 18px rgba(255,255,255,.22);
+  transition:transform .12s ease,box-shadow .12s ease;}
+.gx-icon:active{transform:translateY(2px) scale(.96);}
+.gx-icon:disabled{opacity:.3;}
+.gx-icon-sm{height:36px;width:36px;border-radius:13px;}
+.gx-icon-rose{color:#ffe0ec;background:linear-gradient(160deg,rgba(255,110,170,.55),rgba(255,110,170,.14));border-color:rgba(255,170,205,.6);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6),inset 0 -4px 8px rgba(120,10,70,.3),0 8px 18px -6px rgba(30,5,80,.6),0 0 20px rgba(255,70,140,.5);}
+
+.gx-badge{display:flex;align-items:center;justify-content:center;height:42px;width:42px;border-radius:15px;color:#6d28d9;
+  background:linear-gradient(180deg,#fff,#f4eaff 55%,#d9c4ff);
+  box-shadow:inset 0 1px 0 #fff,0 4px 0 #a98ae0,0 0 28px rgba(255,255,255,.55),0 0 22px rgba(255,95,184,.45);}
+
+.gx-white{color:#4c1d95;font-weight:800;border-radius:16px;
+  background:linear-gradient(180deg,#ffffff 0%,#f6edff 50%,#dcc8ff 100%);
+  box-shadow:inset 0 1px 0 #fff,inset 0 -3px 0 rgba(124,58,237,.25),0 5px 0 #a98ae0,0 14px 26px -6px rgba(255,255,255,.4),0 10px 30px -6px rgba(255,95,184,.5);
+  transition:transform .12s ease,box-shadow .12s ease;}
+.gx-white:active{transform:translateY(4px);
+  box-shadow:inset 0 1px 0 #fff,inset 0 -2px 0 rgba(124,58,237,.25),0 1px 0 #a98ae0,0 6px 14px -6px rgba(255,95,184,.5);}
+.gx-white-sm{border-radius:14px;box-shadow:inset 0 1px 0 #fff,inset 0 -2px 0 rgba(124,58,237,.25),0 3px 0 #a98ae0,0 10px 20px -6px rgba(255,95,184,.5);}
+.gx-white-sm:active{transform:translateY(2px);box-shadow:inset 0 1px 0 #fff,0 1px 0 #a98ae0,0 4px 10px -6px rgba(255,95,184,.5);}
+.gx-rosebtn{color:#fff;font-weight:800;border-radius:16px;
+  background:linear-gradient(180deg,#ff9cc4 0%,#f9468c 52%,#d0206a 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -3px 0 rgba(120,10,50,.35),0 5px 0 #8f1448,0 14px 24px -6px rgba(255,70,140,.55);
+  transition:transform .12s ease,box-shadow .12s ease;}
+.gx-rosebtn:active{transform:translateY(4px);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 1px 0 #8f1448,0 6px 14px -6px rgba(255,70,140,.55);}
+.gx-ghost{color:#fff;font-weight:700;border-radius:16px;background:linear-gradient(160deg,rgba(255,255,255,.30),rgba(255,255,255,.08));
+  border:1px solid rgba(255,255,255,.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 6px 14px -6px rgba(30,5,80,.6);transition:transform .12s ease;}
+.gx-ghost:active{transform:translateY(2px);}
+
+.gx-fab{position:relative;display:flex;align-items:center;justify-content:center;height:60px;width:60px;border-radius:9999px;color:#6d28d9;
+  background:linear-gradient(180deg,#ffffff,#f6edff 50%,#dcc8ff);
+  box-shadow:inset 0 2px 0 #fff,inset 0 -4px 0 rgba(124,58,237,.25),0 6px 0 #a98ae0,0 18px 32px -6px rgba(255,95,184,.6);
+  transition:transform .12s ease,box-shadow .12s ease;}
+.gx-fab:active{transform:translateY(5px);box-shadow:inset 0 2px 0 #fff,0 1px 0 #a98ae0,0 6px 14px -6px rgba(255,95,184,.6);}
+.gx-fab::after{content:'';position:absolute;inset:-8px;border-radius:9999px;z-index:-1;
+  background:radial-gradient(circle,rgba(255,255,255,.65),rgba(255,95,184,.35) 45%,transparent 72%);animation:gx-halo 2.4s ease-in-out infinite;}
+
+.gx-input{border-radius:18px;color:#fff;color-scheme:dark;background:rgba(40,10,90,.38);border:1px solid rgba(255,255,255,.28);
+  box-shadow:inset 0 3px 8px rgba(30,5,70,.5),0 1px 0 rgba(255,255,255,.18);transition:border-color .2s ease,box-shadow .2s ease;}
+.gx-input:focus,.gx-input:focus-within{border-color:#fff;
+  box-shadow:inset 0 3px 8px rgba(30,5,70,.5),0 0 0 3px rgba(255,255,255,.2),0 0 26px rgba(255,95,184,.6);}
+.gx-input::placeholder{color:#bba8e8;}
+
+.gx-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px;border-radius:22px;background:rgba(40,10,90,.38);
+  border:1px solid rgba(255,255,255,.22);box-shadow:inset 0 4px 10px rgba(30,5,70,.5),0 1px 0 rgba(255,255,255,.15);}
+.gx-tab{padding:11px 0;border-radius:16px;font-size:14px;font-weight:700;color:#e0d3ff;transition:all .2s ease;}
+.gx-tab-on{color:#4c1d95;background:linear-gradient(180deg,#fff,#f6edff 55%,#dcc8ff);
+  box-shadow:inset 0 1px 0 #fff,0 4px 0 #a98ae0,0 10px 24px -4px rgba(255,95,184,.55);transform:translateY(-1px);}
+
+.gx-card{position:relative;border-radius:26px;border:1px solid rgba(255,255,255,.36);
+  background:linear-gradient(145deg,rgba(255,255,255,.30) 0%,rgba(255,255,255,.10) 45%,rgba(255,255,255,.18) 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 -14px 28px rgba(60,10,120,.28),0 22px 44px -14px rgba(30,5,80,.65),0 10px 36px -8px rgba(255,95,184,.4);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:transform .18s ease;}
+.gx-card::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
+  background:linear-gradient(160deg,rgba(255,255,255,.34) 0%,rgba(255,255,255,0) 38%);}
+.gx-card>*{position:relative;z-index:1;}
+.gx-card:active{transform:translateY(2px) scale(.985);}
+.gx-card-glow{border-color:rgba(255,255,255,.75);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8),inset 0 -14px 28px rgba(60,10,120,.25),0 22px 44px -14px rgba(30,5,80,.65),0 0 36px rgba(255,255,255,.4),0 10px 40px -6px rgba(255,95,184,.55);}
+.gx-hero{border-radius:30px;}
+.gx-modal{border-radius:28px;background:linear-gradient(150deg,rgba(88,36,170,.97),rgba(44,12,96,.98));}
+
+.gx-pill{white-space:nowrap;border-radius:9999px;padding:3px 10px;font-size:10px;font-weight:700;color:#fff;
+  background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.42);box-shadow:0 0 14px rgba(255,255,255,.25);}
+.gx-chip{display:flex;align-items:center;gap:6px;border-radius:13px;padding:7px 10px;font-size:11px;font-weight:700;}
+.gx-chip-glow{color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.36),rgba(255,255,255,.12));
+  border:1px solid rgba(255,255,255,.55);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 0 18px rgba(255,255,255,.32);}
+.gx-chip-warn{color:#fff;background:linear-gradient(180deg,rgba(255,140,100,.6),rgba(255,95,110,.28));
+  border:1px solid rgba(255,175,135,.75);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 0 18px rgba(255,140,100,.5);animation:gx-blink 2s ease-in-out infinite;}
+.gx-chip-mute{color:#eadcff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);}
+
+.gx-track{height:8px;border-radius:9999px;overflow:hidden;background:rgba(40,10,90,.45);box-shadow:inset 0 2px 4px rgba(30,5,70,.6);}
+.gx-fill{position:relative;height:100%;border-radius:9999px;transition:width .7s ease;
+  background:linear-gradient(90deg,#ff5fb8,#ffb3e0 55%,#ffffff);box-shadow:0 0 14px rgba(255,95,184,.8);}
+.gx-fill::after{content:'';position:absolute;inset:0;border-radius:inherit;
+  background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.7) 50%,transparent 70%);background-size:200% 100%;animation:gx-shimmer 2.4s linear infinite;}
+
+.gx-mini{display:flex;align-items:center;justify-content:center;height:30px;width:30px;border-radius:11px;color:#f1e8ff;
+  background:linear-gradient(160deg,rgba(255,255,255,.34),rgba(255,255,255,.08));border:1px solid rgba(255,255,255,.34);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 4px 10px -4px rgba(30,5,80,.6);transition:transform .12s ease;}
+.gx-mini:active{transform:translateY(2px) scale(.92);}
+.gx-mini-glow{color:#fff;border-color:rgba(255,255,255,.7);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 0 16px rgba(255,255,255,.55);}
+
+.gx-tile{border-radius:18px;padding:12px 0;text-align:center;background:rgba(40,10,90,.38);border:1px solid rgba(255,255,255,.18);
+  box-shadow:inset 0 3px 8px rgba(30,5,70,.5),0 1px 0 rgba(255,255,255,.16);}
+.gx-num{font-weight:800;font-variant-numeric:tabular-nums;text-shadow:0 0 16px rgba(255,255,255,.65);}
+.gx-quote{border-radius:14px;padding:12px;background:rgba(40,10,90,.38);box-shadow:inset 0 3px 8px rgba(30,5,70,.45);}
+
+.gx-day{position:relative;border-radius:22px;padding:16px;border:1px solid rgba(255,255,255,.26);
+  background:linear-gradient(150deg,rgba(255,255,255,.20),rgba(255,255,255,.06));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -8px 18px rgba(60,10,120,.22),0 12px 26px -12px rgba(30,5,80,.7);}
+.gx-day-done{border-color:rgba(255,255,255,.8);background:linear-gradient(150deg,rgba(255,255,255,.38),rgba(255,255,255,.14));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -8px 18px rgba(60,10,120,.2),0 0 28px rgba(255,255,255,.35),0 12px 26px -12px rgba(30,5,80,.7);}
+.gx-day-missed{border-color:rgba(255,175,135,.75);background:linear-gradient(150deg,rgba(255,140,100,.38),rgba(255,95,110,.14));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -8px 18px rgba(120,20,60,.2),0 0 26px rgba(255,140,100,.35),0 12px 26px -12px rgba(30,5,80,.7);}
+.gx-day-open{border-color:rgba(255,255,255,.95);background:linear-gradient(150deg,rgba(255,95,184,.55),rgba(255,95,184,.18));animation:gx-open 2.2s ease-in-out infinite;}
+.gx-day-skip{opacity:.7;}
+
+.gx-toast{border-radius:18px;padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:#fff;
+  background:linear-gradient(150deg,rgba(88,36,170,.97),rgba(44,12,96,.98));border:1px solid rgba(255,255,255,.45);
+  box-shadow:0 0 26px rgba(255,95,184,.5),0 14px 30px -10px rgba(30,5,80,.7);}
+
+.gx-rise{animation:gx-rise .55s cubic-bezier(.2,.8,.2,1) both;}
+@keyframes gx-rise{from{opacity:0;transform:translateY(16px) scale(.97);}to{opacity:1;transform:none;}}
+@keyframes gx-float{0%,100%{transform:translate(0,0);}50%{transform:translate(18px,-24px);}}
+@keyframes gx-halo{0%,100%{opacity:.55;transform:scale(.94);}50%{opacity:1;transform:scale(1.08);}}
+@keyframes gx-shimmer{from{background-position:200% 0;}to{background-position:-200% 0;}}
+@keyframes gx-blink{0%,100%{opacity:1;}50%{opacity:.75;}}
+@keyframes gx-open{
+  0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 0 24px rgba(255,95,184,.5),0 12px 26px -12px rgba(30,5,80,.7);}
+  50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 0 46px rgba(255,95,184,.9),0 12px 26px -12px rgba(30,5,80,.7);}}
+@media (prefers-reduced-motion:reduce){.gx-root *,.gx-root *::after{animation:none !important;}}
+`;
+
 export default function GoalsAppScreen({ onBack }) {
   // NOTE: ab koi default "Gym" goal nahi hai, isliye delete ke baad wapas nahi aayega
   const [goals, setGoals] = useState(loadGoals);
@@ -48,7 +182,6 @@ export default function GoalsAppScreen({ onBack }) {
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(''), 2600);
   };
-
   // goals ko vault me save karo, aur notifications dobara set karwao
   useEffect(() => {
     let vault = [];
@@ -169,45 +302,42 @@ export default function GoalsAppScreen({ onBack }) {
   /* ------------------------- render ------------------------- */
 
   return (
-    <div className="relative min-h-screen overflow-hidden rounded-[28px] bg-gradient-to-b from-[#0c2b24] via-[#0a241d] to-[#071a15] p-4 pb-28 text-[#e4f4ec] animate-in fade-in duration-200">
-      <div className="pointer-events-none absolute -right-10 -top-16 z-0 h-56 w-56 rounded-full bg-[#e6b84f]/10 blur-3xl" />
-      <div className="pointer-events-none absolute -left-16 top-64 z-0 h-56 w-56 rounded-full bg-[#5fd1a8]/10 blur-3xl" />
+    <div className="gx-root gx-bg">
+      <style>{THEME_CSS}</style>
+      <div className="gx-orb gx-orb-a" />
+      <div className="gx-orb gx-orb-b" />
 
       <div className="relative z-10 space-y-5">
         {/* header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button
-              onClick={onBack}
-              aria-label="Back"
-              className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#1f5444] bg-[#123a30] text-[#5fd1a8] transition active:scale-95"
-            >
+            <button onClick={onBack} aria-label="Back" className="gx-icon">
               <ArrowLeft size={18} />
             </button>
             <div>
-              <h2 className="font-serif text-2xl font-bold leading-tight">Life Box Goals</h2>
-              <p className="text-xs text-[#8fb5a6]">Small days, built into big streaks</p>
+              <h2 className="gx-title text-[24px] leading-tight">Life Box Goals</h2>
+              <p className="gx-muted text-xs">Small days, built into big streaks</p>
             </div>
           </div>
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#f2cf7a] to-[#e6b84f] text-[#2a1d00] shadow-[0_0_20px_rgba(230,184,79,0.35)]">
+          <div className="gx-badge">
             <Target size={20} />
           </div>
         </div>
 
         {/* search */}
-        <div className="flex items-center gap-2.5 rounded-2xl border border-[#1f5444] bg-[#123a30] px-4 py-3">
-          <Search size={18} className="text-[#5fd1a8]" />
+        <div className="gx-input flex items-center gap-2.5 px-4 py-3.5">
+          <Search size={18} className="text-[#ffd9f1]" />
           <input
             type="text"
             placeholder="Search goals..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent text-sm text-[#e4f4ec] outline-none placeholder:text-[#6c9585]"
+            className="w-full bg-transparent text-sm text-[#ffffff] outline-none placeholder:text-[#bba8e8]"
           />
         </div>
 
         {/* tabs */}
-        <div className="grid grid-cols-2 gap-1 rounded-2xl border border-[#1f5444] bg-black/20 p-1">
+        <div className="gx-tabs">
           {[
             { key: 'active', label: `Active (${activeCount})` },
             { key: 'completed', label: `Completed (${completedCount})` },
@@ -215,9 +345,7 @@ export default function GoalsAppScreen({ onBack }) {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`rounded-xl py-2.5 text-sm font-semibold transition ${
-                tab === t.key ? 'bg-[#e6b84f] text-[#2a1d00]' : 'text-[#9fc4b4]'
-              }`}
+              className={`gx-tab ${tab === t.key ? 'gx-tab-on' : ''}`}
             >
               {t.label}
             </button>
@@ -226,7 +354,7 @@ export default function GoalsAppScreen({ onBack }) {
 
         {/* goals */}
         {filtered.length === 0 ? (
-          <div className="py-16 text-center text-sm leading-relaxed text-[#8fb5a6]">
+          <div className="gx-muted py-16 text-center text-sm leading-relaxed">
             {tab === 'active'
               ? goals.length === 0
                 ? 'No goals yet. Tap + and start your first streak.'
@@ -234,8 +362,8 @@ export default function GoalsAppScreen({ onBack }) {
               : 'Finished goals will show up here.'}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {filtered.map((item) => {
+          <div className="grid grid-cols-2 gap-3.5">
+            {filtered.map((item, idx) => {
               const stats = getStats(item);
               const missed = getMissedDays(item).length;
               const sd = parseDate(item.startDate);
@@ -243,52 +371,48 @@ export default function GoalsAppScreen({ onBack }) {
                 <div
                   key={item.id}
                   onClick={() => setActiveId(item.id)}
-                  className={`flex min-h-[176px] cursor-pointer flex-col justify-between rounded-[22px] border p-4 transition active:scale-[0.98] ${
-                    item.completed
-                      ? 'border-[#e6b84f]/50 bg-gradient-to-br from-[#2a3a25] to-[#123a30]'
-                      : 'border-[#1f5444] bg-[#123a30]'
+                  style={{ animationDelay: `${Math.min(idx, 8) * 70}ms` }}
+                  className={`gx-card gx-rise flex min-h-[184px] cursor-pointer flex-col justify-between p-4 ${
+                    item.completed ? 'gx-card-glow' : ''
                   }`}
                 >
                   <div>
                     <div className="flex items-center justify-between gap-1">
-                      <span className="rounded-full bg-[#1b4d40] px-2 py-0.5 text-[10px] font-semibold text-[#9fe3c7]">
-                        Since {MONTH_NAMES[sd.getMonth()].slice(0, 3)} {String(sd.getFullYear()).slice(2)}
+                      <span className="gx-pill">
+                        {MONTH_NAMES[sd.getMonth()].slice(0, 3)} {sd.getFullYear()}
                       </span>
-                      <span className="flex items-center gap-1 text-[11px] font-medium text-[#bfe0d2]">
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-[#e8dcff]">
                         <Clock size={11} /> {item.actionTime}
                       </span>
                     </div>
-                    <h4 className="mt-2.5 line-clamp-2 font-serif text-[15px] font-bold leading-snug">{item.title}</h4>
+                    <h4 className="mt-3 line-clamp-2 text-[15px] font-extrabold leading-snug">{item.title}</h4>
                   </div>
 
                   <div className="mt-3 space-y-2.5">
                     {item.completed ? (
-                      <div className="flex items-center gap-1.5 rounded-xl bg-[#e6b84f]/15 px-2 py-1.5 text-[11px] font-semibold text-[#f2cf7a]">
+                      <div className="gx-chip gx-chip-glow">
                         <Trophy size={12} /> Completed
                       </div>
                     ) : missed > 0 ? (
-                      <div className="animate-pulse rounded-xl bg-[#f58a9b]/15 px-2 py-1.5 text-[11px] font-semibold text-[#f58a9b]">
+                      <div className="gx-chip gx-chip-warn">
                         ⚠️ {missed} {missed === 1 ? 'day' : 'days'} missed
                       </div>
                     ) : stats.streak > 0 ? (
-                      <div className="flex items-center gap-1.5 rounded-xl bg-[#e6b84f]/15 px-2 py-1.5 text-[11px] font-semibold text-[#f2cf7a]">
+                      <div className="gx-chip gx-chip-glow">
                         <Flame size={12} /> {stats.streak}-day streak
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1.5 rounded-xl bg-white/5 px-2 py-1.5 text-[11px] font-medium text-[#9fc4b4]">
+                      <div className="gx-chip gx-chip-mute">
                         <Lock size={12} /> Ready when it opens
                       </div>
                     )}
 
-                    <div className="h-1.5 overflow-hidden rounded-full bg-black/25">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-[#5fd1a8] to-[#e6b84f] transition-all duration-700"
-                        style={{ width: `${stats.pct}%` }}
-                      />
+                    <div className="gx-track">
+                      <div className="gx-fill" style={{ width: `${stats.pct}%` }} />
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[#9fe3c7]">
+                      <span className="text-[11px] font-bold text-[#ffd9f1]">
                         Done: {stats.done}/{stats.elapsed}
                       </span>
                       <div className="flex items-center gap-1.5">
@@ -296,7 +420,7 @@ export default function GoalsAppScreen({ onBack }) {
                           <button
                             onClick={(e) => requestComplete(item.id, e)}
                             aria-label="Finish goal"
-                            className="rounded-lg bg-[#e6b84f]/15 p-1.5 text-[#e6b84f] transition active:scale-90"
+                            className="gx-mini gx-mini-glow"
                           >
                             <Trophy size={13} />
                           </button>
@@ -304,7 +428,7 @@ export default function GoalsAppScreen({ onBack }) {
                         <button
                           onClick={(e) => requestDelete(item.id, e)}
                           aria-label="Delete goal"
-                          className="rounded-lg bg-white/5 p-1.5 text-[#9fc4b4] transition active:scale-90"
+                          className="gx-mini"
                         >
                           <Trash2 size={13} />
                         </button>
@@ -317,14 +441,15 @@ export default function GoalsAppScreen({ onBack }) {
           </div>
         )}
       </div>
+
       {/* add button */}
       <div className="fixed bottom-6 right-6 z-30">
         <button
           onClick={() => { setForm(emptyForm()); setIsEditing(true); }}
           aria-label="New goal"
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#f2cf7a] to-[#e6b84f] text-[#2a1d00] shadow-[0_0_26px_rgba(230,184,79,0.5)] transition active:scale-95"
+          className="gx-fab"
         >
-          <Plus size={26} className="stroke-[3]" />
+          <Plus size={28} className="stroke-[3]" />
         </button>
       </div>
 
@@ -341,72 +466,68 @@ export default function GoalsAppScreen({ onBack }) {
 
       {/* new goal form */}
       {isEditing && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-b from-[#0c2b24] via-[#0a241d] to-[#071a15] text-[#e4f4ec]">
+        <div className="gx-bg fixed inset-0 z-50 overflow-y-auto text-[#ffffff]">
           <div className="mx-auto max-w-md px-5 pb-16 pt-5">
             <div className="mb-6 flex items-center justify-between">
-              <button
-                onClick={() => setIsEditing(false)}
-                aria-label="Back"
-                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#1f5444] bg-[#123a30] text-[#5fd1a8] transition active:scale-95"
-              >
+              <button onClick={() => setIsEditing(false)} aria-label="Back" className="gx-icon">
                 <ArrowLeft size={18} />
               </button>
-              <h3 className="font-serif text-base font-bold">New goal</h3>
+              <h3 className="gx-title text-base">New goal</h3>
               <button
                 onClick={handleSave}
-                className="flex h-10 items-center gap-1.5 rounded-2xl bg-gradient-to-br from-[#f2cf7a] to-[#e6b84f] px-4 text-xs font-bold text-[#2a1d00] shadow-[0_4px_16px_rgba(230,184,79,0.35)] transition active:scale-95"
+                className="gx-white gx-white-sm flex h-10 items-center gap-1.5 px-4 text-xs"
               >
                 <Save size={14} /> Save
               </button>
             </div>
 
             <div className="space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#9fe3c7]">What do you want to do every day?</label>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-[#ffd9f1]">What do you want to do every day?</label>
                 <input
                   type="text"
                   placeholder="e.g. Gym at 6:35 AM"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="w-full rounded-2xl border border-[#1f5444] bg-[#123a30] p-3.5 text-sm text-[#e4f4ec] outline-none placeholder:text-[#6c9585] focus:border-[#e6b84f]"
+                  className="gx-input w-full p-3.5 text-sm outline-none"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#9fe3c7]">Unlock time</label>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-[#ffd9f1]">Unlock time</label>
                 <input
                   type="time"
                   value={form.actionTime}
                   onChange={(e) => setForm({ ...form, actionTime: e.target.value })}
-                  className="w-full rounded-2xl border border-[#1f5444] bg-[#123a30] p-3.5 text-sm text-[#e4f4ec] outline-none [color-scheme:dark] focus:border-[#e6b84f]"
+                  className="gx-input w-full p-3.5 text-sm outline-none"
                 />
-                <p className="text-[11px] text-[#8fb5a6]">Your daily log opens at this time, not a minute earlier.</p>
+                <p className="gx-muted text-[11px]">Your daily log opens at this time, not a minute earlier.</p>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#9fe3c7]">Prep reminder</label>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-[#ffd9f1]">Prep reminder</label>
                 <input
                   type="time"
                   value={form.alertTime}
                   onChange={(e) => setForm({ ...form, alertTime: e.target.value })}
-                  className="w-full rounded-2xl border border-[#1f5444] bg-[#123a30] p-3.5 text-sm text-[#e4f4ec] outline-none [color-scheme:dark] focus:border-[#e6b84f]"
+                  className="gx-input w-full p-3.5 text-sm outline-none"
                 />
-                <p className="text-[11px] text-[#8fb5a6]">A phone notification to get you ready. Must be earlier than the unlock time.</p>
+                <p className="gx-muted text-[11px]">A phone notification to get you ready. Must be earlier than the unlock time.</p>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#9fe3c7]">Start date</label>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-[#ffd9f1]">Start date</label>
                 <input
                   type="date"
                   min={toDateStr()}
                   value={form.startDate}
                   onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                  className="w-full rounded-2xl border border-[#1f5444] bg-[#123a30] p-3.5 text-sm text-[#e4f4ec] outline-none [color-scheme:dark] focus:border-[#e6b84f]"
+                  className="gx-input w-full p-3.5 text-sm outline-none"
                 />
-                <p className="text-[11px] text-[#8fb5a6]">The goal keeps running month after month until you finish it.</p>
+                <p className="gx-muted text-[11px]">The goal keeps running month after month until you finish it.</p>
               </div>
 
-              <div className="rounded-2xl border border-[#e6b84f]/30 bg-[#e6b84f]/10 p-4 text-xs leading-relaxed text-[#e9d9a8]">
+              <div className="gx-card gx-card-glow p-4 text-xs leading-relaxed text-[#fbe9ff]">
                 You will get a prep reminder at {form.alertTime || '--:--'}, the log unlocks at {form.actionTime || '--:--'}, and if you skip a day you will get a missed alert at 11:55 PM.
               </div>
             </div>
@@ -416,40 +537,34 @@ export default function GoalsAppScreen({ onBack }) {
 
       {/* confirm popup */}
       {confirm && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/65 p-6 backdrop-blur-sm" onClick={() => setConfirm(null)}>
-          <div
-            className="w-full max-w-sm rounded-[26px] border border-[#1f5444] bg-[#0f3028] p-6 text-[#e4f4ec]"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-[#1a0b3d]/70 p-6 backdrop-blur-sm"
+          onClick={() => setConfirm(null)}
+        >
+          <div className="gx-card gx-modal w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
             <div
               className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${
-                confirm.type === 'complete' ? 'bg-[#e6b84f]/15 text-[#e6b84f]' : 'bg-[#f58a9b]/15 text-[#f58a9b]'
+                confirm.type === 'complete' ? 'gx-chip-glow' : 'gx-chip-warn'
               }`}
+              style={{ animation: 'none' }}
             >
               {confirm.type === 'complete' ? <Trophy size={22} /> : <Trash2 size={22} />}
             </div>
-            <h4 className="font-serif text-lg font-bold">
+            <h4 className="gx-title text-lg">
               {confirm.type === 'complete' ? 'Finish this goal?' : 'Delete this goal?'}
             </h4>
-            <p className="mt-1.5 text-sm leading-relaxed text-[#9fc4b4]">
+            <p className="gx-muted mt-1.5 text-sm leading-relaxed">
               {confirm.type === 'complete'
                 ? 'Daily unlock, missed banners and reminders will stop. Your history stays saved under Completed.'
                 : 'It moves to your Bin. Daily unlock and reminders will stop.'}
             </p>
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setConfirm(null)}
-                className="rounded-2xl border border-[#1f5444] bg-[#123a30] py-3 text-sm font-semibold text-[#cfe6db] transition active:scale-95"
-              >
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button onClick={() => setConfirm(null)} className="gx-ghost py-3 text-sm">
                 Cancel
               </button>
               <button
                 onClick={runConfirm}
-                className={`rounded-2xl py-3 text-sm font-bold transition active:scale-95 ${
-                  confirm.type === 'complete'
-                    ? 'bg-gradient-to-br from-[#f2cf7a] to-[#e6b84f] text-[#2a1d00]'
-                    : 'bg-[#f58a9b] text-[#3a0a14]'
-                }`}
+                className={`py-3 text-sm ${confirm.type === 'complete' ? 'gx-white' : 'gx-rosebtn'}`}
               >
                 {confirm.type === 'complete' ? 'Finish' : 'Delete'}
               </button>
@@ -460,7 +575,7 @@ export default function GoalsAppScreen({ onBack }) {
 
       {/* toast */}
       {toast && (
-        <div className="fixed left-1/2 top-[calc(env(safe-area-inset-top)+12px)] z-[80] w-[88%] max-w-sm -translate-x-1/2 rounded-2xl border border-[#1f5444] bg-black/85 px-4 py-3 text-center text-xs font-medium text-[#e4f4ec] backdrop-blur">
+        <div className="gx-toast fixed left-1/2 top-[calc(env(safe-area-inset-top)+12px)] z-[80] w-[88%] max-w-sm -translate-x-1/2">
           {toast}
         </div>
       )}

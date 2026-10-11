@@ -40,6 +40,45 @@ export default function App() {
   const [enteredPin, setEnteredPin] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // ---------- APP BACKGROUND/FOREGROUND LOCK LISTENER ----------
+  useEffect(() => {
+    let listenerHandle = null;
+    let isMounted = true;
+
+    // Android Native App listener (Home button dabane par)
+    CapApp.addListener('appStateChange', (state) => {
+      if (!state.isActive) {
+        // Jaise hi app background me jaye, authenticate ko reset karein
+        if (localStorage.getItem('newlife_lock_enabled') === 'true') {
+          setIsAuthenticated(false);
+          setEnteredPin('');
+        }
+      }
+    }).then((handle) => {
+      if (isMounted) {
+        listenerHandle = handle;
+      } else {
+        handle.remove();
+      }
+    });
+
+    // Browser tab switch listener (fallback)
+    const handleVisibilityChange = () => {
+      if (document.hidden && localStorage.getItem('newlife_lock_enabled') === 'true') {
+        setIsAuthenticated(false);
+        setEnteredPin('');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      if (listenerHandle) listenerHandle.remove();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+  // -------------------------------------------------------------
+
   useEffect(() => {
     localStorage.setItem('newlife_theme', currentTheme);
   }, [currentTheme]);

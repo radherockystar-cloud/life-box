@@ -24,7 +24,7 @@ export const STOP_RADIUS_M = 80; // staying inside this circle counts as a stop 
 export const STOP_MIN_MS = 10 * 60 * 1000; // ... for at least 10 minutes
 export const DEMO_STOP_MIN_MS = 2 * 60 * 1000; // the demo trip uses 2 minutes so it is quick to see
 export const FAMOUS_MIN_LANGS = 25; // a place counts as famous when its Wikipedia page exists in this many languages
-export const SHOW_DEMO_BUTTON = true; // the "Try a demo trip" button in the People tab. Set false before launching.
+export const SHOW_DEMO_BUTTON = false; // the "Try a demo trip" button in the People tab. Set false before launching.
 
 export const CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 export const CODE_LENGTH = 10;

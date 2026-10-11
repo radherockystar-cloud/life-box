@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import MemoryModal from '../components/MemoryModal';
-import NoteModal from '../components/NoteModal';
-import VoiceModal from '../components/VoiceModal';
-import GoalModal from '../components/GoalModal';
 import ChatAssistantModal from '../components/ChatAssistantModal';
 import NotesAppScreen from './NotesAppScreen';
 import MemoriesAppScreen from './MemoriesAppScreen';
 import GoalsAppScreen from './GoalsAppScreen';
 import VoicesAppScreen from './VoicesAppScreen';
 import AiChatAppScreen from './AiChatAppScreen';
+import LifeMeterScreen from './LifeMeterScreen';
 import { translations } from '../utils/translations';
 import { useBackHandler } from '../utils/useBackHandler';
 import { moveToBin } from '../utils/binStorage';
@@ -16,19 +13,19 @@ import { moveToBin } from '../utils/binStorage';
 // Modular Cards & Slider
 import LifeSliderCard from '../components/cards/LifeSliderCard';
 import AiAssistantCard from '../components/cards/AiAssistantCard';
-import QuickAddCard from '../components/cards/QuickAddCard';
+import LifeMeterCard from '../components/cards/LifeMeterCard';
 import MemoryCard from '../components/cards/MemoryCard';
 import NoteCard from '../components/cards/NoteCard';
 import VoiceCard from '../components/cards/VoiceCard';
 import GoalCard from '../components/cards/GoalCard';
 
 export default function HomeScreen({ currentLang, onSubAppToggle }) {
-  const [activeModal, setActiveModal] = useState(null);
   const [showNotesApp, setShowNotesApp] = useState(false);
   const [showMemoriesApp, setShowMemoriesApp] = useState(false);
   const [showGoalsApp, setShowGoalsApp] = useState(false);
   const [showVoicesApp, setShowVoicesApp] = useState(false);
   const [showAiChatApp, setShowAiChatApp] = useState(false);
+  const [showLifeMeter, setShowLifeMeter] = useState(false);
   
   const t = translations[currentLang] || translations.en;
 
@@ -44,7 +41,7 @@ export default function HomeScreen({ currentLang, onSubAppToggle }) {
     localStorage.setItem('lifebox_vault', JSON.stringify(hiddenVault));
   }, [hiddenVault]);
 
-  const isAnySubAppOpen = showNotesApp || showMemoriesApp || showGoalsApp || showVoicesApp || showAiChatApp;
+  const isAnySubAppOpen = showNotesApp || showMemoriesApp || showGoalsApp || showVoicesApp || showAiChatApp || showLifeMeter;
 
   // Inform App.jsx when any sub-app is open/closed to hide outer headers/nav
   useEffect(() => {
@@ -53,13 +50,13 @@ export default function HomeScreen({ currentLang, onSubAppToggle }) {
     }
   }, [isAnySubAppOpen, onSubAppToggle]);
 
-  // Back button: close the open sub-app / quick-add modal
+  // Back button: close the open sub-app
   useBackHandler(showNotesApp, () => setShowNotesApp(false));
   useBackHandler(showMemoriesApp, () => setShowMemoriesApp(false));
   useBackHandler(showGoalsApp, () => setShowGoalsApp(false));
   useBackHandler(showVoicesApp, () => setShowVoicesApp(false));
   useBackHandler(showAiChatApp, () => setShowAiChatApp(false));
-  useBackHandler(activeModal !== null, () => setActiveModal(null));
+  useBackHandler(showLifeMeter, () => setShowLifeMeter(false));
 
   // When an item is restored from the Bin (Settings), reload the vault list
   useEffect(() => {
@@ -75,11 +72,6 @@ export default function HomeScreen({ currentLang, onSubAppToggle }) {
     return () => window.removeEventListener('newlife-vault-changed', reloadVault);
   }, []);
 
-  const handleSaveItem = (type, data) => {
-    const newItem = { type, date: new Date().toISOString().split('T')[0], ...data };
-    setHiddenVault([newItem, ...hiddenVault]);
-  };
-
   const handleDeleteItem = (indexToDelete) => {
     // Deleted vault items go to the Trash / Bin so they can be restored
     const deletedItem = hiddenVault[indexToDelete];
@@ -93,6 +85,7 @@ export default function HomeScreen({ currentLang, onSubAppToggle }) {
   if (showMemoriesApp) return <MemoriesAppScreen onBack={() => setShowMemoriesApp(false)} />;
   if (showGoalsApp) return <GoalsAppScreen onBack={() => setShowGoalsApp(false)} />;
   if (showVoicesApp) return <VoicesAppScreen onBack={() => setShowVoicesApp(false)} />;
+  if (showLifeMeter) return <LifeMeterScreen onBack={() => setShowLifeMeter(false)} />;
   if (showAiChatApp) return <AiChatAppScreen onBack={() => setShowAiChatApp(false)} hiddenNotes={hiddenVault} onDeleteNote={handleDeleteItem} />;
 
   return (
@@ -110,7 +103,7 @@ export default function HomeScreen({ currentLang, onSubAppToggle }) {
       {/* Professional Feature Cards Grid linked to Full-Screen Modular Apps */}
       <div className="grid grid-cols-2 gap-4">
         <AiAssistantCard onClick={() => setShowAiChatApp(true)} count={hiddenVault.length} />
-        <QuickAddCard onClick={() => setActiveModal('memory')} t={t} />
+        <LifeMeterCard onClick={() => setShowLifeMeter(true)} />
         <MemoryCard onClick={() => setShowMemoriesApp(true)} t={t} />
         <NoteCard onClick={() => setShowNotesApp(true)} t={t} />
         <VoiceCard onClick={() => setShowVoicesApp(true)} t={t} />
@@ -126,12 +119,6 @@ export default function HomeScreen({ currentLang, onSubAppToggle }) {
           Your digital life, fully encrypted & secured locally.
         </div>
       </div>
-
-      {/* Quick Add Modals */}
-      <MemoryModal isOpen={activeModal === 'memory'} onClose={() => setActiveModal(null)} onSave={(data) => handleSaveItem('Memory', data)} />
-      <NoteModal isOpen={activeModal === 'note'} onClose={() => setActiveModal(null)} onSave={(data) => handleSaveItem('Note', data)} />
-      <VoiceModal isOpen={activeModal === 'voice'} onClose={() => setActiveModal(null)} onSave={(data) => handleSaveItem('Voice', data)} />
-      <GoalModal isOpen={activeModal === 'goal'} onClose={() => setActiveModal(null)} onSave={(data) => handleSaveItem('Goal', data)} />
 
     </div>
   );

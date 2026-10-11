@@ -1,189 +1,430 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Search, Trash2, Save, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Plus, Search, Trash2, Save, Sparkles, Star, Share2 } from 'lucide-react';
 import { useBackHandler } from '../utils/useBackHandler';
 
+const NOTES_KEY = 'lifebox_keep_notes';
+const BIN_KEY = 'newlife_bin';
+const EMPTY_NOTE = { id: null, title: '', content: '', fav: false };
+
+const DEFAULT_NOTES = [
+  { id: 1, title: 'Welcome Note', content: 'Life Box ke andar apne notes yahan secure rakhein...', date: '2026-09-06' },
+];
+
+const pad = (n) => String(n).padStart(2, '0');
+// Aaj ki date phone ke time ke hisaab se (UTC nahi, taaki subah/raat ki date galat na ho)
+const todayLocal = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+const prettyDate = (str) => {
+  const [y, m, d] = String(str || '').split('-').map(Number);
+  if (!y || !m || !d) return str || '';
+  return new Date(y, m - 1, d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const loadNotes = () => {
+  try {
+    const saved = localStorage.getItem(NOTES_KEY);
+    if (!saved) return DEFAULT_NOTES;
+    const list = JSON.parse(saved);
+    return Array.isArray(list) ? list : DEFAULT_NOTES;
+  } catch (e) {
+    return DEFAULT_NOTES;
+  }
+};
+
+// ---------- design (Memories jaisa pink-white glossy glow) ----------
+const INK = '#3b0f24';
+const glass = {
+  background: 'linear-gradient(160deg,#ffffff 0%,rgba(255,255,255,0.82) 55%,rgba(255,234,243,0.96) 100%)',
+  border: '1px solid rgba(251,113,133,0.25)',
+  borderTop: '1px solid #ffffff',
+  boxShadow: 'inset 0 2px 0 #ffffff, inset 0 -9px 14px -10px rgba(244,63,94,0.25), 0 10px 22px -10px rgba(244,63,94,0.35), 0 0 22px -8px rgba(251,113,133,0.35)',
+};
+const roseBtn = {
+  background: 'linear-gradient(160deg,#fb7185 0%,#e11d48 55%,#be123c 100%)',
+  border: '1px solid rgba(255,255,255,0.5)',
+  borderTop: '1px solid rgba(255,255,255,0.85)',
+  boxShadow: 'inset 0 1.5px 0 rgba(255,255,255,0.65), inset 0 -6px 12px -6px rgba(80,0,40,0.5), 0 8px 18px -4px rgba(225,29,72,0.65), 0 0 24px rgba(244,63,94,0.5)',
+  color: '#fff',
+};
+const goldGlow = {
+  border: '1px solid rgba(251,191,36,0.75)',
+  borderTop: '1px solid #fff7d6',
+  boxShadow: 'inset 0 2px 0 #fffbe6, inset 0 -9px 14px -10px rgba(245,158,11,0.35), 0 10px 22px -10px rgba(245,158,11,0.5), 0 0 26px -4px rgba(251,191,36,0.6)',
+};
+
+// Har note ko halka alag pastel rang
+const TINTS = [
+  'linear-gradient(160deg,#ffffff 0%,#ffeaf3 100%)',
+  'linear-gradient(160deg,#ffffff 0%,#fff0e6 100%)',
+  'linear-gradient(160deg,#ffffff 0%,#f5ecff 100%)',
+  'linear-gradient(160deg,#ffffff 0%,#e9f9f0 100%)',
+  'linear-gradient(160deg,#ffffff 0%,#e8f3ff 100%)',
+];
+
+const CSS = `
+@keyframes noteRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes noteTwinkle{0%,100%{opacity:.7;transform:scale(1) rotate(0)}50%{opacity:1;transform:scale(1.2) rotate(12deg)}}
+.note-card{animation:noteRise .3s ease-out}
+.note-scroll::-webkit-scrollbar{width:0;height:0}
+.note-field::placeholder{color:rgba(190,24,93,.4)}
+.note-field:focus{border-color:rgba(244,63,94,.85)!important;box-shadow:0 0 0 3px rgba(244,63,94,.15),0 0 22px rgba(244,63,94,.25)!important}
+`;
+
 export default function NotesAppScreen({ onBack }) {
-  const [notes, setNotes] = useState(() => {
-    const saved = localStorage.getItem('lifebox_keep_notes');
-    return saved ? JSON.parse(saved) : [
-      { id: 1, title: "Welcome Note", content: "Life Box ke andar apne notes yahan secure rakhein...", date: "2026-09-06" }
-    ];
-  });
-
+  const [notes, setNotes] = useState(loadNotes);
   const [searchQuery, setSearchQuery] = useState('');
+  const [onlyFav, setOnlyFav] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentNote, setCurrentNote] = useState({ id: null, title: '', content: '' });
+  const [currentNote, setCurrentNote] = useState(EMPTY_NOTE);
+  const [storageFull, setStorageFull] = useState(false);
+  const [toast, setToast] = useState('');
 
-  // Back button closes the note editor
-  useBackHandler(isEditing, () => setIsEditing(false));
+  // Editor band karte waqt (back button se bhi) latest text chahiye, isliye ref
+  const currentNoteRef = useRef(currentNote);
+  currentNoteRef.current = currentNote;
+  const originalRef = useRef(null); // editor khulte waqt note kaisa tha
+  const savedRef = useRef(false); // double save se bachne ke liye
 
   useEffect(() => {
-    localStorage.setItem('lifebox_keep_notes', JSON.stringify(notes));
+    try {
+      localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+      setStorageFull(false);
+    } catch (e) {
+      setStorageFull(true);
+    }
   }, [notes]);
+
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = setTimeout(() => setToast(''), 2200);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const openEditor = (note) => {
+    const base = { ...EMPTY_NOTE, ...note };
+    setCurrentNote(base);
+    originalRef.current = { title: base.title, content: base.content, fav: !!base.fav };
+    savedRef.current = false;
+    setIsEditing(true);
+  };
+
+  // Current note ko save karta hai. true = kuch save hua.
+  const persistCurrent = () => {
+    if (savedRef.current) return false;
+    const n = currentNoteRef.current;
+    const title = (n.title || '').trim();
+    const content = n.content || '';
+    if (!title && !content.trim()) return false;
+
+    const orig = originalRef.current;
+    if (n.id && orig && orig.title === n.title && orig.content === n.content && orig.fav === !!n.fav) return false; // kuch badla nahi
+
+    savedRef.current = true;
+    const nowIso = new Date().toISOString();
+    if (n.id) {
+      setNotes((prev) => prev.map((x) => (x.id === n.id ? { ...n, title: title || 'Untitled Note', updatedAt: nowIso } : x)));
+    } else {
+      const entry = { id: Date.now(), title: title || 'Untitled Note', content, date: todayLocal(), createdAt: nowIso, fav: !!n.fav };
+      setNotes((prev) => [entry, ...prev]);
+    }
+    return true;
+  };
+
+  // Back arrow / phone back: likha hua kho na jaye, isliye apne aap save (Google Keep jaisa)
+  const closeEditor = () => {
+    if (persistCurrent()) setToast('Note saved');
+    setIsEditing(false);
+  };
+  useBackHandler(isEditing, closeEditor);
 
   const handleSaveNote = (e) => {
     e.preventDefault();
-    if (!currentNote.title.trim() && !currentNote.content.trim()) return;
-
-    if (currentNote.id) {
-      setNotes(notes.map(n => n.id === currentNote.id ? currentNote : n));
-    } else {
-      const newEntry = {
-        id: Date.now(),
-        title: currentNote.title || 'Untitled Note',
-        content: currentNote.content,
-        date: new Date().toISOString().split('T')[0]
-      };
-      setNotes([newEntry, ...notes]);
+    const n = currentNoteRef.current;
+    if (!(n.title || '').trim() && !(n.content || '').trim()) {
+      setToast('Write something first');
+      return;
     }
+    persistCurrent();
     setIsEditing(false);
-    setCurrentNote({ id: null, title: '', content: '' });
+    setToast('Note saved');
+  };
+
+  // Favourite: sirf dikhne ka order badalta hai, list ki asli jagah nahi.
+  // Isliye favourite hataane par note apni purani jagah par wapas dikhta hai.
+  const toggleFav = (id, e) => {
+    if (e) e.stopPropagation();
+    const target = notes.find((n) => n.id === id);
+    if (!target) return;
+    setNotes(notes.map((n) => (n.id === id ? { ...n, fav: !n.fav } : n)));
+    setToast(target.fav ? 'Removed from favourites' : 'Added to favourites ⭐');
   };
 
   // Delete note and push it to Trash / Bin Manager storage
   const deleteNote = (id, e) => {
     e.stopPropagation();
-    const noteToDelete = notes.find(n => n.id === id);
+    const noteToDelete = notes.find((n) => n.id === id);
     if (!noteToDelete) return;
 
-    // Get existing bin items
-    const existingBin = JSON.parse(localStorage.getItem('newlife_bin') || '[]');
-    const trashItem = {
-      id: noteToDelete.id,
-      title: noteToDelete.title,
-      content: noteToDelete.content,
-      type: "Note",
-      date: noteToDelete.date,
-      deletedAt: "Just now"
-    };
-
-    localStorage.setItem('newlife_bin', JSON.stringify([trashItem, ...existingBin]));
-
-    // Remove from active notes
-    setNotes(notes.filter(n => n.id !== id));
+    try {
+      const existingBin = JSON.parse(localStorage.getItem(BIN_KEY) || '[]');
+      const trashItem = {
+        id: noteToDelete.id,
+        title: noteToDelete.title,
+        content: noteToDelete.content,
+        type: 'Note',
+        date: noteToDelete.date,
+        deletedAt: 'Just now',
+      };
+      localStorage.setItem(BIN_KEY, JSON.stringify([trashItem, ...existingBin]));
+    } catch (err) {
+      // Bin full ho to bhi delete ho jaye
+    }
+    setNotes(notes.filter((n) => n.id !== id));
+    setToast('Moved to Bin');
   };
 
-  const filteredNotes = notes.filter(n => 
-    n.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    n.content.toLowerCase().includes(searchQuery.toLowerCase())
+  const handleShare = async (note, e) => {
+    if (e) e.stopPropagation();
+    const text = `${note.title}\n\n${note.content || ''}`.trim();
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: note.title, text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        setToast('Copied to clipboard');
+      }
+    } catch (err) {
+      // share cancel kiya to kuch nahi karna
+    }
+  };
+
+  const q = searchQuery.toLowerCase();
+  const filtered = notes.filter(
+    (n) =>
+      (!onlyFav || n.fav) &&
+      ((n.title || '').toLowerCase().includes(q) || (n.content || '').toLowerCase().includes(q))
+  );
+  const favNotes = filtered.filter((n) => n.fav);
+  const otherNotes = filtered.filter((n) => !n.fav);
+  const favCount = notes.filter((n) => n.fav).length;
+
+  const renderCard = (note) => {
+    const tint = TINTS[Math.abs(Number(note.id) || 0) % TINTS.length];
+    return (
+      <div
+        key={note.id}
+        onClick={() => openEditor(note)}
+        className="note-card"
+        style={{
+          ...glass,
+          background: tint,
+          ...(note.fav ? goldGlow : {}),
+          position: 'relative',
+          borderRadius: '24px',
+          padding: '14px',
+          minHeight: '150px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          cursor: 'pointer',
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px' }}>
+            <h4 className="line-clamp-1" style={{ fontSize: '13px', fontWeight: 900, color: '#be123c', flex: 1, minWidth: 0 }}>{note.title}</h4>
+            <button
+              type="button"
+              onClick={(e) => toggleFav(note.id, e)}
+              aria-label={note.fav ? 'Remove from favourites' : 'Add to favourites'}
+              style={{ padding: '3px', cursor: 'pointer', flexShrink: 0, marginTop: '-2px' }}
+            >
+              <Star
+                size={18}
+                style={
+                  note.fav
+                    ? { color: '#f59e0b', fill: '#fbbf24', filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.9))', animation: 'noteTwinkle 2.2s ease-in-out infinite' }
+                    : { color: '#d4a0b4' }
+                }
+              />
+            </button>
+          </div>
+          <p className="line-clamp-4" style={{ fontSize: '11.5px', fontWeight: 600, color: '#6f2f4b', lineHeight: 1.5, marginTop: '6px' }}>{note.content}</p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px', paddingTop: '8px', borderTop: '1px solid rgba(251,113,133,0.2)' }}>
+          <span style={{ fontSize: '9.5px', fontWeight: 800, color: '#b0587a' }}>{prettyDate(note.date)}</span>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button onClick={(e) => handleShare(note, e)} aria-label="Share" style={{ padding: '6px', borderRadius: '10px', color: '#e11d48', background: 'rgba(244,63,94,0.1)', cursor: 'pointer' }}>
+              <Share2 size={13} />
+            </button>
+            <button onClick={(e) => deleteNote(note.id, e)} aria-label="Move to Bin" title="Move to Trash" style={{ padding: '6px', borderRadius: '10px', color: '#e11d48', background: 'rgba(244,63,94,0.1)', cursor: 'pointer' }}>
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const sectionLabel = (text) => (
+    <div style={{ fontSize: '12px', fontWeight: 900, letterSpacing: '0.04em', color: '#a8264f', margin: '4px 4px 8px' }}>{text}</div>
   );
 
   return (
-    <div className="space-y-4 pb-28 animate-in fade-in duration-200 relative min-h-screen">
-      
-      {/* Top Header inside Screen (No Add Button here now) */}
+    <div className="space-y-4 pb-28 relative min-h-screen">
+      <style>{CSS}</style>
+
+      {/* Header */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-3">
-          <button 
-            onClick={onBack}
-            className="p-2.5 rounded-2xl bg-white border border-rose-100 text-rose-500 shadow-sm hover:scale-95 transition-all cursor-pointer flex items-center justify-center"
-          >
-            <ArrowLeft size={18} />
+          <button onClick={onBack} aria-label="Back" style={{ ...glass, width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48', cursor: 'pointer' }}>
+            <ArrowLeft size={20} />
           </button>
           <div>
-            <h2 className="text-xl font-black text-gray-900 tracking-wide">Life Box Notes</h2>
-            <p className="text-xs font-bold text-gray-500 mt-0.5">Your secure personal notepad</p>
+            <h2 style={{ fontSize: '21px', fontWeight: 900, color: INK, textShadow: '0 0 16px rgba(251,113,133,0.4)' }}>Life Box Notes</h2>
+            <p style={{ fontSize: '11.5px', fontWeight: 700, color: '#a8466c', marginTop: '2px' }}>
+              {notes.length === 0 ? 'Your secure personal notepad' : `${notes.length} ${notes.length === 1 ? 'note' : 'notes'}${favCount ? ` · ${favCount} favourite` : ''}`}
+            </p>
           </div>
         </div>
-        <Sparkles size={18} className="text-rose-400 animate-pulse" />
+        <div style={{ ...glass, width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Sparkles size={20} style={{ color: '#f43f5e', filter: 'drop-shadow(0 0 8px rgba(244,63,94,0.8))', animation: 'noteTwinkle 2.2s ease-in-out infinite' }} />
+        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="flex items-center bg-white border border-rose-100 rounded-2xl px-4 py-3 gap-2.5 shadow-sm">
-        <Search size={18} className="text-rose-400" />
-        <input 
+      {storageFull && (
+        <div style={{ ...glass, borderRadius: '18px', padding: '12px 14px', border: '1px solid rgba(225,29,72,0.6)', fontSize: '12px', fontWeight: 800, color: '#be123c', lineHeight: 1.5 }}>
+          ⚠️ Phone storage for the app is full. Your latest change may not be saved. Delete some old notes or memories.
+        </div>
+      )}
+
+      {/* Search */}
+      <div style={{ ...glass, borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '10px', padding: '0 16px', height: '50px' }}>
+        <Search size={18} style={{ color: '#f43f5e', flexShrink: 0 }} />
+        <input
           type="text"
+          className="note-field"
           placeholder="Search notes..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="bg-transparent text-xs w-full outline-none text-gray-800 placeholder-gray-400 font-bold"
+          style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '13px', fontWeight: 700, color: INK }}
         />
       </div>
 
-      {/* Main Notes Grid Area */}
+      {/* All / Favourites */}
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {[
+          { key: false, label: '🌸 All' },
+          { key: true, label: '⭐ Favourites' },
+        ].map((chip) => {
+          const active = onlyFav === chip.key;
+          return (
+            <button
+              key={chip.label}
+              type="button"
+              onClick={() => setOnlyFav(chip.key)}
+              style={{ ...(active ? roseBtn : glass), borderRadius: '16px', padding: '9px 16px', fontSize: '12px', fontWeight: 900, color: active ? '#fff' : '#a8264f', cursor: 'pointer' }}
+            >
+              {chip.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Notes */}
       <div>
-        {filteredNotes.length === 0 ? (
-          <div className="text-center py-20 text-gray-400 font-bold text-xs">
-            No notes found. Tap the + button below to create one!
+        {filtered.length === 0 ? (
+          <div style={{ ...glass, borderRadius: '28px', textAlign: 'center', padding: '44px 20px' }}>
+            <div style={{ fontSize: '44px' }}>{onlyFav ? '⭐' : '📝'}</div>
+            <div style={{ fontSize: '15px', fontWeight: 900, color: INK, marginTop: '8px' }}>
+              {onlyFav && notes.length > 0 && !searchQuery ? 'No favourites yet' : notes.length === 0 ? 'No notes yet' : 'Nothing found'}
+            </div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#a8466c', marginTop: '4px' }}>
+              {onlyFav && notes.length > 0 && !searchQuery ? 'Tap the star on a note to pin it to the top.' : notes.length === 0 ? 'Tap + to write your first note!' : 'Try another word.'}
+            </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {filteredNotes.map((note) => (
-              <div 
-                key={note.id}
-                onClick={() => { setCurrentNote(note); setIsEditing(true); }}
-                className="bg-white border border-rose-100 p-4 rounded-[24px] flex flex-col justify-between cursor-pointer hover:scale-[1.02] transition-all shadow-[0_10px_25px_rgba(0,0,0,0.04)] min-h-[140px] relative group"
-              >
-                <div className="space-y-1.5">
-                  <h4 className="text-xs font-black text-rose-600 tracking-wide line-clamp-1">{note.title}</h4>
-                  <p className="text-[11px] text-gray-600 font-medium line-clamp-4 leading-relaxed">{note.content}</p>
-                </div>
-                <div className="flex justify-between items-center mt-3 pt-2 border-t border-rose-50">
-                  <span className="text-[9px] text-gray-400 font-bold">{note.date}</span>
-                  <button 
-                    onClick={(e) => deleteNote(note.id, e)}
-                    className="text-gray-400 hover:text-rose-500 p-1 transition-colors cursor-pointer"
-                    title="Move to Trash"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          <>
+            {favNotes.length > 0 && (
+              <>
+                {!onlyFav && sectionLabel('⭐ FAVOURITES')}
+                <div className="grid grid-cols-2 gap-3">{favNotes.map(renderCard)}</div>
+              </>
+            )}
+            {otherNotes.length > 0 && (
+              <>
+                {favNotes.length > 0 && <div style={{ height: '16px' }} />}
+                {favNotes.length > 0 && sectionLabel('ALL NOTES')}
+                <div className="grid grid-cols-2 gap-3">{otherNotes.map(renderCard)}</div>
+              </>
+            )}
+          </>
         )}
       </div>
 
-      {/* Floating Add Note (+) Button at Bottom Right */}
-      <div className="fixed bottom-6 right-6 z-30">
-        <button 
-          onClick={() => { setCurrentNote({ id: null, title: '', content: '' }); setIsEditing(true); }}
-          className="w-14 h-14 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 text-white flex items-center justify-center shadow-xl glow-rose cursor-pointer active:scale-95 transition-all border-none"
+      {/* Floating Add Note (+) Button */}
+      <div className="fixed bottom-24 right-5 z-30">
+        <button
+          onClick={() => openEditor(EMPTY_NOTE)}
+          aria-label="Add Note"
           title="Add Note"
+          style={{ ...roseBtn, width: '60px', height: '60px', borderRadius: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
         >
-          <Plus size={26} className="stroke-[3]" />
+          <Plus size={28} strokeWidth={3} />
         </button>
       </div>
 
-      {/* Full Edit / Create Note Modal View */}
+      {/* Full Edit / Create Note View */}
       {isEditing && (
-        <div className="absolute inset-0 bg-white z-50 flex flex-col p-5 animate-in fade-in duration-200">
-          <div className="flex justify-between items-center mb-4">
-            <button 
-              onClick={() => setIsEditing(false)}
-              className="p-2.5 rounded-2xl bg-rose-50 border border-rose-100 text-rose-500 cursor-pointer"
-            >
-              <ArrowLeft size={18} />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', flexDirection: 'column', padding: '18px', background: 'radial-gradient(90% 40% at 0% 0%,rgba(251,113,133,.28),transparent 60%),radial-gradient(80% 40% at 100% 100%,rgba(244,114,182,.28),transparent 62%),linear-gradient(180deg,#fff8fb,#ffeaf3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexShrink: 0, gap: '8px' }}>
+            <button onClick={closeEditor} aria-label="Back" style={{ ...glass, width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48', cursor: 'pointer' }}>
+              <ArrowLeft size={20} />
             </button>
-            <h3 className="text-xs font-black tracking-wide text-gray-800">
-              {currentNote.id ? 'Edit Note' : 'New Note'}
-            </h3>
-            <button 
-              onClick={handleSaveNote}
-              className="px-4 py-2 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-black flex items-center gap-1.5 text-xs cursor-pointer shadow glow-rose border-none"
+            <h3 style={{ fontSize: '15px', fontWeight: 900, color: INK, flex: 1, textAlign: 'center' }}>{currentNote.id ? 'Edit Note' : 'New Note'}</h3>
+            <button
+              type="button"
+              onClick={() => setCurrentNote({ ...currentNote, fav: !currentNote.fav })}
+              aria-label="Favourite"
+              style={{ ...glass, ...(currentNote.fav ? goldGlow : {}), width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
             >
-              <Save size={14} /> Save
+              <Star size={20} style={currentNote.fav ? { color: '#f59e0b', fill: '#fbbf24', filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.9))' } : { color: '#d4a0b4' }} />
+            </button>
+            <button onClick={handleSaveNote} style={{ ...roseBtn, height: '44px', padding: '0 18px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 900, cursor: 'pointer' }}>
+              <Save size={16} /> Save
             </button>
           </div>
 
-          <div className="flex-1 flex flex-col gap-3">
-            <input 
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
+            <input
               type="text"
-              placeholder="Note Title..."
+              className="note-field"
+              placeholder="Note title..."
               value={currentNote.title}
               onChange={(e) => setCurrentNote({ ...currentNote, title: e.target.value })}
-              className="bg-transparent text-base font-black text-gray-900 outline-none border-b border-rose-100 pb-2 placeholder-gray-300"
+              style={{ ...glass, borderRadius: '20px', padding: '15px 18px', fontSize: '16px', fontWeight: 900, color: INK, outline: 'none' }}
             />
-            <textarea 
+            <textarea
+              className="note-field"
               placeholder="Write your note details here..."
               value={currentNote.content}
               onChange={(e) => setCurrentNote({ ...currentNote, content: e.target.value })}
-              className="flex-1 bg-transparent text-xs text-gray-700 outline-none resize-none placeholder-gray-300 font-bold leading-relaxed pt-2"
+              style={{ ...glass, flex: 1, minHeight: 0, borderRadius: '22px', padding: '16px 18px', fontSize: '14px', fontWeight: 600, color: INK, lineHeight: 1.65, outline: 'none', resize: 'none' }}
             />
+            <div style={{ textAlign: 'right', fontSize: '10.5px', fontWeight: 800, color: '#b0587a', flexShrink: 0 }}>
+              {(currentNote.content || '').trim() ? (currentNote.content.trim().split(/\s+/).length) : 0} words · {(currentNote.content || '').length} characters
+            </div>
           </div>
         </div>
       )}
 
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'fixed', left: '50%', bottom: '100px', transform: 'translateX(-50%)', zIndex: 80, background: 'rgba(60,10,30,0.92)', color: '#fff', padding: '10px 18px', borderRadius: '14px', fontSize: '13px', fontWeight: 800 }}>
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

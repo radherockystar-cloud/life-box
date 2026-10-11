@@ -1,11 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Lock } from 'lucide-react';
 import { useBackHandler } from '../../utils/useBackHandler';
 import CalendarGrid from './CalendarGrid';
 import AddPlanForm from './AddPlanForm';
 import MyPlansList from './MyPlansList';
 import { getFestivalsForDate, getFestivalsInMonth, getNextFestival, getDayEmoji, toDateStr, dateFromStr } from './festivalsData';
-import { loadPlans, savePlans, addOrUpdatePlan, deletePlan } from './plansStorage';
+import { loadPlans, savePlans, addOrUpdatePlan, deletePlan, getBannerPlans, getKind } from './plansStorage';
 import { requestSync } from './reminderService';
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -41,7 +41,13 @@ const prettyShort = (dateStr) => {
   return `${WEEKDAY_NAMES[d.getDay()].slice(0, 3)}, ${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`;
 };
 
+const formatTime = (time) => {
+  const [h, m] = (time || '09:00').split(':').map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+};
+
 export default function PlannerTab() {
+  const [, setTick] = useState(0);
   const now = new Date();
   const todayStr = toDateStr(now);
 
@@ -58,6 +64,15 @@ export default function PlannerTab() {
   const [showList, setShowList] = useState(false);
 
   const touchStart = useRef(null);
+  const sliderRef = useRef(null);
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  // Re-check every minute (so banners change at midnight) and refresh the reminders when the tab opens
+  useEffect(() => {
+    requestSync(500);
+    const timer = setInterval(() => setTick((t) => t + 1), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   // ---------- Back button ----------
   const closeForm = () => {
@@ -129,6 +144,31 @@ export default function PlannerTab() {
 
   // ---------- What to show ----------
   const nextFestival = getNextFestival(now);
+  const bannerPlans = getBannerPlans(plans, now);
+
+  // Slides: the next festival first, then plan banners (7 days before / today)
+  const slides = [
+    ...(nextFestival ? [{ key: 'festival', type: 'festival' }] : []),
+    ...bannerPlans.map(({ plan, days }) => ({ key: `plan-${plan.id}-${days}`, type: 'plan', plan, days })),
+  ];
+  const slideCount = slides.length;
+
+  // Auto-slide every 4 seconds when there is more than one banner
+  useEffect(() => {
+    if (slideCount < 2) return undefined;
+    const timer = setInterval(() => {
+      const el = sliderRef.current;
+      if (!el) return;
+      const next = (Math.round(el.scrollLeft / el.clientWidth) + 1) % slideCount;
+      el.scrollTo({ left: next * el.clientWidth, behavior: 'smooth' });
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [slideCount]);
+
+  const onSliderScroll = (e) => {
+    const el = e.currentTarget;
+    setSlideIndex(Math.round(el.scrollLeft / el.clientWidth));
+  };
   const monthFestivals = getFestivalsInMonth(viewYear, viewMonth);
   const selectedFestivals = selectedDate ? getFestivalsForDate(selectedDate) : [];
   const isCurrentMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth();
@@ -158,28 +198,84 @@ export default function PlannerTab() {
             </div>
           </div>
 
-          {/* Next festival */}
-          {nextFestival && (
-            <button
-              type="button"
-              onClick={() => {
-                const d = dateFromStr(nextFestival.dateStr);
-                setViewYear(d.getFullYear());
-                setViewMonth(d.getMonth());
-                setSelectedDate(nextFestival.dateStr);
-              }}
-              style={{ ...glass, width: '100%', borderRadius: '24px', padding: '12px 14px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '12px', color: '#fff', cursor: 'pointer', textAlign: 'left' }}
-            >
-              <span style={{ fontSize: '30px', filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.3))' }}>{nextFestival.festival.emoji}</span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: '9.5px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.8)' }}>Next festival</span>
-                <span style={{ display: 'block', fontSize: '15px', fontWeight: 900, marginTop: '1px' }}>{nextFestival.festival.names.en}</span>
-                <span style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>{prettyShort(nextFestival.dateStr)}</span>
-              </span>
-              <span style={{ fontSize: '11px', fontWeight: 900, padding: '6px 11px', borderRadius: '12px', background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.5)' }}>
-                {daysText(nextFestival.daysLeft)}
-              </span>
-            </button>
+          {/* Banner slider: next festival + plan banners (7 days before / today) */}
+          {slideCount > 0 && (
+            <div style={{ marginBottom: '14px' }}>
+              <div ref={sliderRef} onScroll={onSliderScroll} style={{ display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
+                {slides.map((slide) => {
+                  const isToday = slide.type === 'plan' && slide.days === 0;
+                  const cardStyle = {
+                    ...glass,
+                    flex: '0 0 100%',
+                    scrollSnapAlign: 'start',
+                    boxSizing: 'border-box',
+                    borderRadius: '24px',
+                    padding: '12px 14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    ...(isToday ? { background: 'linear-gradient(145deg, rgba(255,226,130,0.55), rgba(255,130,170,0.4))', border: '1px solid rgba(255,240,180,0.95)' } : {}),
+                  };
+
+                  if (slide.type === 'festival') {
+                    return (
+                      <button
+                        key={slide.key}
+                        type="button"
+                        onClick={() => {
+                          const d = dateFromStr(nextFestival.dateStr);
+                          setViewYear(d.getFullYear());
+                          setViewMonth(d.getMonth());
+                          setSelectedDate(nextFestival.dateStr);
+                        }}
+                        style={cardStyle}
+                      >
+                        <span style={{ fontSize: '30px', filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.3))' }}>{nextFestival.festival.emoji}</span>
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ display: 'block', fontSize: '9.5px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.8)' }}>Next festival</span>
+                          <span style={{ display: 'block', fontSize: '15px', fontWeight: 900, marginTop: '1px' }}>{nextFestival.festival.names.en}</span>
+                          <span style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>{prettyShort(nextFestival.dateStr)}</span>
+                        </span>
+                        <span style={{ fontSize: '11px', fontWeight: 900, padding: '6px 11px', borderRadius: '12px', background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.5)' }}>
+                          {daysText(nextFestival.daysLeft)}
+                        </span>
+                      </button>
+                    );
+                  }
+
+                  const { plan, days } = slide;
+                  const kind = getKind(plan.kind);
+                  return (
+                    <button key={slide.key} type="button" onClick={() => openEditPlan(plan)} style={cardStyle}>
+                      <span style={{ fontSize: '30px', filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.3))' }}>{kind.emoji}</span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: 'block', fontSize: '9.5px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' }}>
+                          {days === 0 ? '🎉 Today is the day' : '⏳ One week to go'}
+                        </span>
+                        <span style={{ display: 'block', fontSize: '15px', fontWeight: 900, marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{plan.title}</span>
+                        <span style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>
+                          {days === 0 ? 'Today' : prettyShort(toDateStr(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7)))}, {formatTime(plan.time)}
+                        </span>
+                      </span>
+                      <span style={{ fontSize: '11px', fontWeight: 900, padding: '6px 11px', borderRadius: '12px', background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.5)' }}>
+                        {days === 0 ? 'Today!' : 'In 7 days'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {slideCount > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '5px', marginTop: '8px' }}>
+                  {slides.map((slide, i) => (
+                    <span key={slide.key} style={{ width: i === slideIndex ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === slideIndex ? '#fff' : 'rgba(255,255,255,0.45)', transition: 'all 0.2s' }} />
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Month selector */}

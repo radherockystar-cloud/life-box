@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Plus, Search, Trash2, Edit3, Lock, Repeat, Bell } from 'lucide-react';
 import { getKind, getNextOccurrence, daysUntil } from './plansStorage';
-import { SETTING_KEYS, readSetting, writeSetting, requestSync, canNotify, sendTestNotification } from './reminderService';
+import { SETTING_KEYS, readSetting, writeSetting, requestSync, canNotify } from './reminderService';
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -49,22 +49,11 @@ export default function MyPlansList({ plans, onClose, onAdd, onEdit, onDelete })
   const [festivalsOn, setFestivalsOn] = useState(() => readSetting(SETTING_KEYS.festivals, true));
   const [plansOn, setPlansOn] = useState(() => readSetting(SETTING_KEYS.plans, true));
   const [hideTitles, setHideTitles] = useState(() => readSetting(SETTING_KEYS.hideTitles, false));
-  const [testMessage, setTestMessage] = useState('');
 
   const changeSetting = (key, setter) => (value) => {
     writeSetting(key, value);
     setter(value);
     requestSync(300);
-  };
-
-  const handleTest = async () => {
-    setTestMessage('Sending...');
-    try {
-      const ok = await sendTestNotification();
-      setTestMessage(ok ? 'A test notification will arrive in 5 seconds.' : 'Could not send. Please allow notifications for this app in phone settings.');
-    } catch {
-      setTestMessage('Could not send a test notification.');
-    }
   };
 
   const handleDelete = (plan) => {
@@ -194,14 +183,7 @@ export default function MyPlansList({ plans, onClose, onAdd, onEdit, onDelete })
             Notifications come in your app language. The plan name stays exactly as you wrote it.
           </p>
 
-          {canNotify() ? (
-            <>
-              <button type="button" onClick={handleTest} style={{ marginTop: '10px', width: '100%', padding: '10px', borderRadius: '14px', background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.5)', color: '#fff', fontSize: '12px', fontWeight: 900, cursor: 'pointer' }}>
-                Send a test notification
-              </button>
-              {testMessage && <p style={{ fontSize: '10.5px', fontWeight: 700, color: '#fde68a', marginTop: '6px' }}>{testMessage}</p>}
-            </>
-          ) : (
+          {!canNotify() && (
             <p style={{ fontSize: '10.5px', fontWeight: 800, color: '#fde68a', marginTop: '8px', lineHeight: 1.5 }}>
               Notifications are sent by the installed Android app. They do not appear while testing in the browser.
             </p>

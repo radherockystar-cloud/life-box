@@ -7,6 +7,7 @@ import {
 /* =====================================================================
    PART 2  –  GoalDetailScreen.jsx  (src/screens/ me, GoalsAppScreen.jsx ke saath)
    Isme: goal ka detail (daily log) screen. Helpers ab src/utils/goalHelpers.js me hain.
+   Theme ki CSS (gx- classes) GoalsAppScreen.jsx me hai, yeh screen usi ke andar khulti hai.
    ===================================================================== */
 
 import {
@@ -25,18 +26,32 @@ function ProgressRing({ pct }) {
   const r = 42;
   const c = 2 * Math.PI * r;
   return (
-    <div className="relative h-[108px] w-[108px] shrink-0">
-      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-        <circle cx="50" cy="50" r={r} fill="none" stroke="#1f5444" strokeWidth="7" />
+    <div className="relative h-[116px] w-[116px] shrink-0">
+      <div
+        className="absolute inset-3 rounded-full"
+        style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.28), transparent 70%)' }}
+      />
+      <svg
+        viewBox="0 0 100 100"
+        className="relative h-full w-full -rotate-90"
+        style={{ filter: 'drop-shadow(0 0 9px rgba(255,95,184,0.75))' }}
+      >
+        <defs>
+          <linearGradient id="gxRing" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#ff5fb8" />
+            <stop offset="100%" stopColor="#ffffff" />
+          </linearGradient>
+        </defs>
+        <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="8" />
         <circle
-          cx="50" cy="50" r={r} fill="none" stroke="#e6b84f" strokeWidth="7"
+          cx="50" cy="50" r={r} fill="none" stroke="url(#gxRing)" strokeWidth="8"
           strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)}
           style={{ transition: 'stroke-dashoffset 0.8s ease' }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-serif text-[26px] font-bold leading-none text-[#f6e3ac]">{pct}%</span>
-        <span className="mt-1 text-[10px] text-[#8fb5a6]">consistency</span>
+        <span className="gx-num text-[27px] leading-none text-[#ffffff]">{pct}%</span>
+        <span className="mt-1 text-[10px] font-semibold text-[#e0d3ff]">consistency</span>
       </div>
     </div>
   );
@@ -80,23 +95,19 @@ export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDel
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-b from-[#0c2b24] via-[#0a241d] to-[#071a15] text-[#e4f4ec]">
+    <div className="gx-bg fixed inset-0 z-50 overflow-y-auto text-[#ffffff]">
       <div className="mx-auto max-w-md px-5 pb-28 pt-5">
         {/* header */}
         <div className="mb-5 flex items-center gap-2">
-          <button
-            onClick={onBack}
-            aria-label="Back"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#1f5444] bg-[#123a30] text-[#5fd1a8] transition active:scale-95"
-          >
+          <button onClick={onBack} aria-label="Back" className="gx-icon">
             <ArrowLeft size={18} />
           </button>
-          <h3 className="flex-1 truncate text-center font-serif text-base font-bold">{goal.title}</h3>
+          <h3 className="gx-title flex-1 truncate text-center text-base">{goal.title}</h3>
           {!goal.completed && (
             <button
               onClick={() => onRequestComplete(goal.id)}
               aria-label="Finish goal"
-              className="flex h-10 shrink-0 items-center gap-1.5 rounded-2xl bg-gradient-to-br from-[#f2cf7a] to-[#e6b84f] px-3 text-xs font-bold text-[#2a1d00] shadow-[0_4px_16px_rgba(230,184,79,0.35)] transition active:scale-95"
+              className="gx-white gx-white-sm flex h-10 shrink-0 items-center gap-1.5 px-3 text-xs"
             >
               <Trophy size={15} /> Finish
             </button>
@@ -104,57 +115,57 @@ export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDel
           <button
             onClick={() => onRequestDelete(goal.id)}
             aria-label="Delete goal"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#f58a9b]/30 bg-[#f58a9b]/10 text-[#f58a9b] transition active:scale-95"
+            className="gx-icon gx-icon-rose"
           >
             <Trash2 size={16} />
           </button>
         </div>
 
         {/* hero */}
-        <div className="rounded-[28px] border border-[#1f5444] bg-gradient-to-br from-[#14423a] to-[#0f3028] p-5">
+        <div className="gx-card gx-hero p-5">
           <div className="flex items-center gap-4">
             <ProgressRing pct={stats.pct} />
-            <div className="flex-1 space-y-2.5 text-xs text-[#bfe0d2]">
+            <div className="flex-1 space-y-2.5 text-xs text-[#f0e7ff]">
               <div className="flex items-center gap-2">
-                <Unlock size={14} className="shrink-0 text-[#5fd1a8]" />
-                <span>Opens daily at <b className="text-[#e4f4ec]">{goal.actionTime}</b></span>
+                <Unlock size={14} className="shrink-0 text-[#ffd9f1]" />
+                <span>Opens daily at <b className="text-[#ffffff]">{goal.actionTime}</b></span>
               </div>
               <div className="flex items-center gap-2">
-                <BellRing size={14} className="shrink-0 text-[#e6b84f]" />
-                <span>Reminder at <b className="text-[#e4f4ec]">{goal.alertTime}</b></span>
+                <BellRing size={14} className="shrink-0 text-[#ffb3e0]" />
+                <span>Reminder at <b className="text-[#ffffff]">{goal.alertTime}</b></span>
               </div>
               <div className="flex items-center gap-2">
-                <CalendarDays size={14} className="shrink-0 text-[#8fb5a6]" />
-                <span>Started <b className="text-[#e4f4ec]">{formatDate(goal.startDate)}</b></span>
+                <CalendarDays size={14} className="shrink-0 text-[#d8c8ff]" />
+                <span>Started <b className="text-[#ffffff]">{formatDate(goal.startDate)}</b></span>
               </div>
             </div>
           </div>
 
           <div className="mt-5 grid grid-cols-3 gap-2.5">
-            <div className="rounded-2xl bg-black/20 py-3 text-center">
-              <div className="flex items-center justify-center gap-1 font-serif text-xl font-bold text-[#f6e3ac]">
-                <Flame size={17} className="text-[#e6b84f]" /> {stats.streak}
+            <div className="gx-tile">
+              <div className="gx-num flex items-center justify-center gap-1 text-xl text-[#ffffff]">
+                <Flame size={17} className="text-[#ffb86b]" /> {stats.streak}
               </div>
-              <p className="mt-0.5 text-[11px] text-[#8fb5a6]">Current streak</p>
+              <p className="gx-muted mt-0.5 text-[11px]">Current streak</p>
             </div>
-            <div className="rounded-2xl bg-black/20 py-3 text-center">
-              <div className="font-serif text-xl font-bold">{stats.best}</div>
-              <p className="mt-0.5 text-[11px] text-[#8fb5a6]">Best streak</p>
+            <div className="gx-tile">
+              <div className="gx-num text-xl text-[#ffffff]">{stats.best}</div>
+              <p className="gx-muted mt-0.5 text-[11px]">Best streak</p>
             </div>
-            <div className="rounded-2xl bg-black/20 py-3 text-center">
-              <div className="font-serif text-xl font-bold">{stats.done}/{stats.elapsed}</div>
-              <p className="mt-0.5 text-[11px] text-[#8fb5a6]">Days done</p>
+            <div className="gx-tile">
+              <div className="gx-num text-xl text-[#ffffff]">{stats.done}/{stats.elapsed}</div>
+              <p className="gx-muted mt-0.5 text-[11px]">Days done</p>
             </div>
           </div>
         </div>
 
         {/* completed banner */}
         {goal.completed && (
-          <div className="mt-4 flex items-start gap-3 rounded-2xl border border-[#e6b84f]/40 bg-[#e6b84f]/10 p-4">
-            <Trophy size={20} className="mt-0.5 shrink-0 text-[#e6b84f]" />
+          <div className="gx-card gx-card-glow mt-4 flex items-start gap-3 p-4">
+            <Trophy size={20} className="mt-0.5 shrink-0 text-white" />
             <div>
-              <p className="font-serif text-sm font-bold text-[#f6e3ac]">Goal completed</p>
-              <p className="mt-0.5 text-xs leading-relaxed text-[#cfe6db]">
+              <p className="gx-title text-sm">Goal completed</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-[#f0e7ff]">
                 Finished on {formatDate(goal.completedAt || today)}. Daily unlock, missed banners and reminders are switched off.
               </p>
             </div>
@@ -167,40 +178,40 @@ export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDel
             disabled={viewIdx <= minIdx}
             onClick={() => setViewIdx((v) => v - 1)}
             aria-label="Previous month"
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#1f5444] bg-[#123a30] text-[#9fe3c7] transition active:scale-95 disabled:opacity-25"
+            className="gx-icon gx-icon-sm"
           >
             <ChevronLeft size={18} />
           </button>
           <div className="text-center">
-            <p className="font-serif text-lg font-bold">{MONTH_NAMES[viewMonth]} {viewYear}</p>
-            <p className="text-[11px] text-[#8fb5a6]">{monthDone} of {monthDays.length} days logged</p>
+            <p className="gx-title text-lg">{MONTH_NAMES[viewMonth]} {viewYear}</p>
+            <p className="gx-muted text-[11px]">{monthDone} of {monthDays.length} days logged</p>
           </div>
           <button
             disabled={viewIdx >= maxIdx}
             onClick={() => setViewIdx((v) => v + 1)}
             aria-label="Next month"
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#1f5444] bg-[#123a30] text-[#9fe3c7] transition active:scale-95 disabled:opacity-25"
+            className="gx-icon gx-icon-sm"
           >
             <ChevronRight size={18} />
           </button>
         </div>
 
         {!goal.completed && (
-          <p className="mb-4 flex items-center gap-1.5 text-[11px] text-[#8fb5a6]">
+          <p className="gx-muted mb-4 flex items-center gap-1.5 text-[11px]">
             <Lock size={12} /> Each day opens at {goal.actionTime} and locks again as soon as you save.
           </p>
         )}
 
         {/* day list */}
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           {notStarted && (
-            <div className="rounded-2xl border border-[#1f5444] bg-white/[0.03] p-4 text-sm text-[#bfe0d2]">
+            <div className="gx-day text-sm text-[#f0e7ff]">
               This goal starts on {formatDate(goal.startDate)}. Your first day opens at {goal.actionTime}.
             </div>
           )}
 
           {!notStarted && monthDays.length === 0 && (
-            <div className="rounded-2xl border border-[#1f5444] bg-white/[0.03] p-4 text-sm text-[#bfe0d2]">
+            <div className="gx-day text-sm text-[#f0e7ff]">
               No days to show for this month.
             </div>
           )}
@@ -215,63 +226,65 @@ export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDel
             const dayNo = Math.round((parseDate(dateStr) - startD) / 86400000) + 1;
 
             const tone = isDone
-              ? 'border-[#5fd1a8]/40 bg-[#5fd1a8]/10'
+              ? 'gx-day-done'
               : isMissed
-              ? 'border-[#f58a9b]/40 bg-[#f58a9b]/10'
+              ? 'gx-day-missed'
               : isOpen
-              ? 'border-[#e6b84f] bg-[#e6b84f]/10 shadow-[0_0_28px_rgba(230,184,79,0.22)]'
-              : 'border-[#1f5444] bg-white/[0.03]';
+              ? 'gx-day-open'
+              : isSkipped
+              ? 'gx-day-skip'
+              : '';
 
             return (
-              <div key={dateStr} className={`rounded-2xl border p-4 transition ${tone}`}>
+              <div key={dateStr} className={`gx-day ${tone}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-serif text-sm font-bold">Day {dayNo}</p>
-                    <p className="text-[11px] text-[#8fb5a6]">
+                    <p className="text-sm font-extrabold">Day {dayNo}</p>
+                    <p className="gx-muted text-[11px]">
                       {formatDate(dateStr, { weekday: 'short', day: 'numeric', month: 'short' })}
                     </p>
                   </div>
-                  <span className="flex items-center gap-1 text-xs font-semibold">
+                  <span className="flex items-center gap-1 text-xs font-bold">
                     {isDone ? (
-                      <span className="flex items-center gap-1 text-[#5fd1a8]"><Check size={14} /> Done</span>
+                      <span className="flex items-center gap-1 text-white"><Check size={14} /> Done</span>
                     ) : isMissed ? (
-                      <span className="text-[#f58a9b]">⚠️ Missed</span>
+                      <span className="text-[#ffd2bd]">⚠️ Missed</span>
                     ) : isOpen ? (
-                      <span className="flex items-center gap-1 text-[#e6b84f]"><Unlock size={13} /> Open now</span>
+                      <span className="flex items-center gap-1 text-white"><Unlock size={13} /> Open now</span>
                     ) : isSkipped ? (
-                      <span className="text-[#8fb5a6]">Not logged</span>
+                      <span className="gx-muted">Not logged</span>
                     ) : (
-                      <span className="flex items-center gap-1 text-[#8fb5a6]"><Lock size={13} /> Locked</span>
+                      <span className="gx-muted flex items-center gap-1"><Lock size={13} /> Locked</span>
                     )}
                   </span>
                 </div>
 
                 {isDone && (
-                  <div className="mt-3 rounded-xl bg-black/20 p-3">
-                    <p className="text-sm leading-relaxed text-[#e4f4ec]">“{log.note}”</p>
-                    <p className="mt-1.5 text-[11px] text-[#8fb5a6]">Saved at {log.timestamp}</p>
+                  <div className="gx-quote mt-3">
+                    <p className="text-sm leading-relaxed">“{log.note}”</p>
+                    <p className="gx-muted mt-1.5 text-[11px]">Saved at {log.timestamp}</p>
                   </div>
                 )}
 
                 {isMissed && (
-                  <p className="mt-2 text-xs italic text-[#f7b4be]">
+                  <p className="mt-2 text-xs italic text-[#ffd9c7]">
                     You missed this day. Tomorrow is a fresh start.
                   </p>
                 )}
 
                 {isOpen && (
-                  <div className="mt-3 space-y-2.5">
+                  <div className="mt-3 space-y-3">
                     <input
                       type="text"
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
                       placeholder="How did it go today? e.g. Crushed leg day 💪"
-                      className="w-full rounded-xl border border-[#1f5444] bg-[#0c2b24] px-3.5 py-3 text-sm text-[#e4f4ec] outline-none placeholder:text-[#6c9585] focus:border-[#e6b84f]"
+                      className="gx-input w-full px-3.5 py-3 text-sm outline-none"
                     />
                     <button
                       onClick={submit}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#e6b84f] to-[#f2cf7a] py-3 text-sm font-bold text-[#2a1d00] shadow-[0_4px_18px_rgba(230,184,79,0.35)] transition active:scale-[0.98]"
+                      className="gx-white flex w-full items-center justify-center gap-2 py-3 text-sm"
                     >
                       <Save size={15} /> Save today’s progress
                     </button>
@@ -279,7 +292,7 @@ export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDel
                 )}
 
                 {!isDone && !isMissed && !isOpen && !isSkipped && isToday && (
-                  <p className="mt-2 text-xs text-[#8fb5a6]">Opens today at {goal.actionTime}.</p>
+                  <p className="gx-muted mt-2 text-xs">Opens today at {goal.actionTime}.</p>
                 )}
               </div>
             );

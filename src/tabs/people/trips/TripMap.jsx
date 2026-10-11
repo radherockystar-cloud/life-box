@@ -1,9 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+// MapLibre v6 draws the map in a separate "worker" file. In a bundled app it must be told where that file is,
+// once, before the first map is made. Without this the map stays blank and "Loading map..." never ends.
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { Crosshair } from 'lucide-react';
-import { loadMapStyle, MAP_ATTRIBUTION } from './mapStyle';
+import { EMPTY_STYLE, loadMapStyle } from './mapStyle';
 import { boundsOf } from './tripAnalysis';
+
+maplibregl.setWorkerUrl(workerUrl);
 
 const GRADIENT = ['interpolate', ['linear'], ['line-progress'], 0, '#22d3ee', 0.5, '#a78bfa', 1, '#f472b6'];
 
@@ -57,6 +62,7 @@ export default function TripMap({ path, markers = [], live = false, liveEmoji = 
 
   const [state, setState] = useState('loading'); // loading | ready | failed
   const [offline, setOffline] = useState(false);
+  const [errorText, setErrorText] = useState('');
   const [showRecenter, setShowRecenter] = useState(false);
 
   // ----- drawing helpers (they always read the newest path / markers) -----
@@ -107,6 +113,39 @@ export default function TripMap({ path, markers = [], live = false, liveEmoji = 
   useEffect(() => {
     let cancelled = false;
     let map = null;
+    let started = false;
+    let safetyTimer = null;
+
+    // Add the glowing trail. Done as soon as the map style is ready, so a slow or missing map picture never blocks it.
+    const startTrail = () => {
+      if (cancelled || started || !map) return;
+      try {
+        map.addSource('trail', { type: 'geojson', lineMetrics: true, data: toCollection([]) });
+        map.addLayer({
+          id: 'trail-glow',
+          type: 'line',
+          source: 'trail',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-width': 16, 'line-blur': 12, 'line-opacity': 0.55, 'line-gradient': GRADIENT },
+        });
+        map.addLayer({
+          id: 'trail-line',
+          type: 'line',
+          source: 'trail',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-width': 5, 'line-gradient': GRADIENT },
+        });
+        started = true;
+        readyRef.current = true;
+        setState('ready');
+        drawPath();
+        drawMarkers();
+      } catch (error) {
+        console.error('Trail could not be drawn:', error);
+        setErrorText(String((error && error.message) || error));
+        setState('failed');
+      }
+    };
 
     (async () => {
       const { style, offline: isOffline } = await loadMapStyle();
@@ -125,31 +164,26 @@ export default function TripMap({ path, markers = [], live = false, liveEmoji = 
           interactive,
           fadeDuration: 0,
         });
-        map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: MAP_ATTRIBUTION }), 'bottom-right');
+        // The map data already says "OpenFreeMap © OpenMapTiles Data from OpenStreetMap", so no extra attribution text is added
+        map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
         mapRef.current = map;
 
-        map.on('load', () => {
-          if (cancelled) return;
-          map.addSource('trail', { type: 'geojson', lineMetrics: true, data: toCollection([]) });
-          map.addLayer({
-            id: 'trail-glow',
-            type: 'line',
-            source: 'trail',
-            layout: { 'line-cap': 'round', 'line-join': 'round' },
-            paint: { 'line-width': 16, 'line-blur': 12, 'line-opacity': 0.55, 'line-gradient': GRADIENT },
-          });
-          map.addLayer({
-            id: 'trail-line',
-            type: 'line',
-            source: 'trail',
-            layout: { 'line-cap': 'round', 'line-join': 'round' },
-            paint: { 'line-width': 5, 'line-gradient': GRADIENT },
-          });
-          readyRef.current = true;
-          setState('ready');
-          drawPath();
-          drawMarkers();
+        map.on('style.load', startTrail);
+        map.on('error', (event) => {
+          if (!started) setErrorText(String((event && event.error && event.error.message) || 'Map problem'));
         });
+
+        // Safety net: if the map style never becomes ready, use a plain dark background so the route is still shown
+        safetyTimer = setTimeout(() => {
+          if (started || cancelled || !map) return;
+          setOffline(true);
+          try {
+            map.setStyle(EMPTY_STYLE);
+          } catch (error) {
+            setErrorText(String((error && error.message) || error));
+            setState('failed');
+          }
+        }, 9000);
 
         if (live) {
           map.on('dragstart', () => {
@@ -166,6 +200,7 @@ export default function TripMap({ path, markers = [], live = false, liveEmoji = 
     return () => {
       cancelled = true;
       readyRef.current = false;
+      if (safetyTimer) clearTimeout(safetyTimer);
       if (replayFrameRef.current) cancelAnimationFrame(replayFrameRef.current);
       if (map) map.remove();
       mapRef.current = null;
@@ -254,7 +289,12 @@ export default function TripMap({ path, markers = [], live = false, liveEmoji = 
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '22%', background: 'linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0))', pointerEvents: 'none' }} />
 
       {state === 'loading' && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 800 }}>Loading map...</div>}
-      {state === 'failed' && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, textAlign: 'center', color: '#fff', fontSize: 12, fontWeight: 800 }}>The map could not load on this phone. Your route is still saved.</div>}
+      {state === 'failed' && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20, textAlign: 'center', color: '#fff', fontSize: 12, fontWeight: 800, gap: 6 }}>
+          <span>The map could not load on this phone. Your route is still saved.</span>
+          {errorText && <span style={{ fontSize: 10, fontWeight: 700, opacity: 0.75, wordBreak: 'break-word' }}>{errorText}</span>}
+        </div>
+      )}
       {state === 'ready' && offline && note('Map pictures need internet. Your route is shown on a plain background.')}
 
       {live && showRecenter && (

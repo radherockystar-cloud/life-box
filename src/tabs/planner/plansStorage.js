@@ -68,8 +68,14 @@ export const getNextOccurrence = (plan, today = new Date()) => {
     return when >= startOfToday ? when : null;
   }
 
-  let when = new Date(startOfToday.getFullYear(), m - 1, d);
-  if (when < startOfToday) when = new Date(startOfToday.getFullYear() + 1, m - 1, d);
+  // 29 Feb in a non-leap year -> use 28 Feb (instead of rolling over to 1 Mar)
+  const inYear = (year) => {
+    const date = new Date(year, m - 1, d);
+    return date.getMonth() === m - 1 ? date : new Date(year, m - 1, d - 1);
+  };
+
+  let when = inYear(startOfToday.getFullYear());
+  if (when < startOfToday) when = inYear(startOfToday.getFullYear() + 1);
   return when;
 };
 
@@ -77,3 +83,14 @@ export const daysUntil = (when, today = new Date()) => {
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   return Math.round((when - startOfToday) / 86400000);
 };
+
+// Plans that need a banner today: exactly 7 days away, or happening today.
+// (Each banner shows for just that one day.)
+export const getBannerPlans = (plans, today = new Date()) =>
+  plans
+    .map((plan) => {
+      const next = getNextOccurrence(plan, today);
+      return next ? { plan, days: daysUntil(next, today) } : null;
+    })
+    .filter((item) => item && (item.days === 0 || item.days === 7))
+    .sort((a, b) => a.days - b.days || (a.plan.time || '').localeCompare(b.plan.time || ''));
