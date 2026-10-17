@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Plus, Search, Trash2, Save, Sparkles, Star, Share2 } from 'lucide-react';
 import { useBackHandler } from '../utils/useBackHandler';
+import { moveToBin } from '../utils/binStorage';
+import { appStorage } from '../utils/appStorage';
 
 const NOTES_KEY = 'lifebox_keep_notes';
-const BIN_KEY = 'newlife_bin';
 const EMPTY_NOTE = { id: null, title: '', content: '', fav: false };
 
 const DEFAULT_NOTES = [
@@ -24,7 +25,7 @@ const prettyDate = (str) => {
 
 const loadNotes = () => {
   try {
-    const saved = localStorage.getItem(NOTES_KEY);
+    const saved = appStorage.getItem(NOTES_KEY);
     if (!saved) return DEFAULT_NOTES;
     const list = JSON.parse(saved);
     return Array.isArray(list) ? list : DEFAULT_NOTES;
@@ -89,7 +90,7 @@ export default function NotesAppScreen({ onBack }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+      appStorage.setItem(NOTES_KEY, JSON.stringify(notes));
       setStorageFull(false);
     } catch (e) {
       setStorageFull(true);
@@ -167,19 +168,10 @@ export default function NotesAppScreen({ onBack }) {
     const noteToDelete = notes.find((n) => n.id === id);
     if (!noteToDelete) return;
 
-    try {
-      const existingBin = JSON.parse(localStorage.getItem(BIN_KEY) || '[]');
-      const trashItem = {
-        id: noteToDelete.id,
-        title: noteToDelete.title,
-        content: noteToDelete.content,
-        type: 'Note',
-        date: noteToDelete.date,
-        deletedAt: 'Just now',
-      };
-      localStorage.setItem(BIN_KEY, JSON.stringify([trashItem, ...existingBin]));
-    } catch (err) {
-      // Bin full ho to bhi delete ho jaye
+    // Bin mein bhejo (restore par wapas Notes mein aayega, favourite ke saath)
+    if (!moveToBin({ ...noteToDelete, type: 'Note' }, NOTES_KEY)) {
+      setToast('Could not move to Bin. Phone storage is full.');
+      return;
     }
     setNotes(notes.filter((n) => n.id !== id));
     setToast('Moved to Bin');

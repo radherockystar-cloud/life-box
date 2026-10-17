@@ -1,3 +1,4 @@
+import { appStorage } from './appStorage';
 // Goals ke shared helpers (date, streak, missed days, load).
 // GoalsAppScreen.jsx, GoalDetailScreen.jsx aur goalReminders.js teeno yahin se use karte hain.
 
@@ -92,7 +93,7 @@ export const getStats = (goal) => {
 // Goals vault se padhna (screen band ho tab bhi notifications ke liye kaam aata hai)
 export const loadGoals = () => {
   try {
-    const saved = JSON.parse(localStorage.getItem('newlife_vault') || '[]');
+    const saved = JSON.parse(appStorage.getItem('newlife_vault') || '[]');
     if (!Array.isArray(saved)) return [];
     return saved.filter((i) => i && i.type === 'Goal').map(normalizeGoal);
   } catch (e) {

@@ -1,96 +1,146 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, BellRing, CheckCircle, ShieldAlert } from 'lucide-react';
+import { Bell } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
+import {
+  canNotify,
+  isNotifEnabled,
+  setNotifEnabled,
+  getNotificationPermission,
+  requestNotificationPermission,
+  cancelAllNotifications,
+  syncNotifications,
+  sendTestNotification,
+} from '../../tabs/planner/reminderService';
 
-export default function NotificationManager({ currentTheme }) {
-  const [permission, setPermission] = useState(Notification.permission);
-  const [notifEnabled, setNotifEnabled] = useState(() => {
-    return localStorage.getItem('newlife_notif') === 'true';
-  });
+// Master notification switch.
+//  OFF -> app koi notification nahi bhejta (pehle se lage hue sab cancel ho jate hain)
+//  ON  -> festival, plan aur trip notifications wapas lag jate hain
+export default function NotificationManager() {
+  const { c, t } = useApp();
 
+  const [enabled, setEnabled] = useState(isNotifEnabled);
+  const [permission, setPermission] = useState('prompt'); // granted | denied | prompt | unsupported
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+
+  // Phone ki asli permission dekho (popup ke bina)
   useEffect(() => {
-    localStorage.setItem('newlife_notif', notifEnabled);
-  }, [notifEnabled]);
+    let alive = true;
+    getNotificationPermission().then((p) => {
+      if (alive) setPermission(p);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
-  const requestPermission = async () => {
-    if (!('Notification' in window)) {
-      alert('This browser does not support desktop/mobile notifications.');
+  const handleToggle = async () => {
+    if (busy) return;
+    setBusy(true);
+    setMessage('');
+    try {
+      if (!enabled) {
+        // ON karna: pehle phone se permission maango
+        const result = await requestNotificationPermission();
+        setPermission(result);
+        if (result === 'denied') {
+          setMessage(t.notifDenied);
+          return;
+        }
+        if (result === 'unsupported') setMessage(t.notifAppOnly);
+        setNotifEnabled(true);
+        setEnabled(true);
+        await syncNotifications();
+      } else {
+        // OFF karna: switch band + sab lage hue notifications cancel
+        setNotifEnabled(false);
+        setEnabled(false);
+        await cancelAllNotifications(true);
+        // Agar us waqt koi sync chal raha tha to ye use band switch ke hisaab se dobara chalata hai
+        syncNotifications();
+      }
+    } catch (err) {
+      console.error('Notification switch failed:', err);
+      setMessage(t.notifTestFailed);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleTest = async () => {
+    setMessage('');
+    if (!enabled) {
+      setMessage(t.notifNeedEnable);
       return;
     }
-
-    const res = await Notification.requestPermission();
-    setPermission(res);
-
-    if (res === 'granted') {
-      setNotifEnabled(true);
-      new Notification('New Life ❤️', {
-        body: 'Notifications are successfully enabled! We will keep you updated.',
-        icon: '/favicon.ico'
-      });
-    } else {
-      setNotifEnabled(false);
-      alert('Notification permission was denied.');
+    if (!canNotify()) {
+      setMessage(t.notifAppOnly);
+      return;
+    }
+    try {
+      const sent = await sendTestNotification();
+      setMessage(sent ? t.notifTestSent : t.notifDenied);
+    } catch (err) {
+      console.error('Test notification failed:', err);
+      setMessage(t.notifTestFailed);
     }
   };
 
-  const handleToggle = () => {
-    if (!notifEnabled && permission !== 'granted') {
-      requestPermission();
-    } else {
-      setNotifEnabled(!notifEnabled);
-    }
-  };
+  const statusText = !enabled
+    ? t.notifStatusOff
+    : permission === 'denied' || permission === 'prompt'
+      ? t.notifStatusPending
+      : t.notifStatusOn;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div style={{ padding: '8px', borderRadius: '12px', background: '#fff1f2', color: '#f43f5e' }}>
+        <div style={{ padding: '8px', borderRadius: '12px', background: c.accentSoft, color: '#f43f5e' }}>
           <Bell size={18} />
         </div>
-        <h4 style={{ fontSize: '14px', fontWeight: '900', color: currentTheme === 'dark' ? '#f9fafb' : '#111827' }}>
-          Notification Settings
-        </h4>
+        <h4 style={{ fontSize: '14px', fontWeight: '900', color: c.ink }}>{t.notifTitle}</h4>
       </div>
 
-      <div style={{ padding: '16px', borderRadius: '16px', background: currentTheme === 'dark' ? '#1e293b' : '#fafafa', border: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '16px', borderRadius: '16px', background: c.isDark ? c.surface : c.surfaceAlt, border: '1px solid ' + (c.isDark ? c.line : 'rgba(0,0,0,0.06)'), display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
         <div>
-          <h5 style={{ fontSize: '13px', fontWeight: '900', color: currentTheme === 'dark' ? '#f9fafb' : '#1f2937' }}>
-            Push Reminders
-          </h5>
-          <p style={{ fontSize: '10px', color: '#9ca3af', fontWeight: '700', marginTop: '2px' }}>
-            Status: {permission === 'granted' && notifEnabled ? 'Active & Working ✅' : 'Disabled / Pending ⚠️'}
-          </p>
+          <h5 style={{ fontSize: '13px', fontWeight: '900', color: c.ink }}>{t.notifPush}</h5>
+          <p style={{ fontSize: '10px', color: c.faint, fontWeight: '700', marginTop: '2px' }}>{statusText}</p>
         </div>
-        <button 
+        <button
           onClick={handleToggle}
-          style={{ 
-            background: notifEnabled ? 'linear-gradient(135deg, #f43f5e, #ec4899)' : '#e5e7eb', 
-            color: notifEnabled ? '#ffffff' : '#4b5563', 
-            border: 'none', 
-            padding: '8px 16px', 
-            borderRadius: '12px', 
-            fontSize: '11px', 
-            fontWeight: '900', 
-            cursor: 'pointer',
-            boxShadow: notifEnabled ? '0 4px 12px rgba(244,63,94,0.3)' : 'none'
+          disabled={busy}
+          style={{
+            background: enabled ? 'linear-gradient(135deg, #f43f5e, #ec4899)' : c.line,
+            color: enabled ? '#ffffff' : c.inkSoft,
+            border: 'none',
+            padding: '8px 16px',
+            borderRadius: '12px',
+            fontSize: '11px',
+            fontWeight: '900',
+            cursor: busy ? 'default' : 'pointer',
+            opacity: busy ? 0.6 : 1,
+            boxShadow: enabled ? '0 4px 12px rgba(244,63,94,0.3)' : 'none',
+            minWidth: '64px',
           }}
         >
-          {notifEnabled ? 'Enabled' : 'Enable'}
+          {enabled ? t.notifOn : t.notifOff}
         </button>
       </div>
 
-      <button 
-        onClick={() => {
-          if (Notification.permission === 'granted') {
-            new Notification('New Life Reminder ❤️', { body: 'Aapka goal aapka intezaar kar raha hai! Mehnat karte raho!' });
-            alert('Test notification sent!');
-          } else {
-            alert('Please enable notifications first.');
-          }
-        }}
-        style={{ width: '100%', padding: '12px', borderRadius: '14px', background: '#fef2f2', border: '1px solid #fee2e2', color: '#f43f5e', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }}
+      <p style={{ fontSize: '11px', color: c.inkMuted, fontWeight: '700', lineHeight: 1.5 }}>
+        {enabled ? t.notifOnInfo : t.notifOffInfo}
+      </p>
+
+      <button
+        onClick={handleTest}
+        style={{ width: '100%', padding: '12px', borderRadius: '14px', background: c.isDark ? c.accentSoft : '#fef2f2', border: '1px solid ' + (c.isDark ? c.accentLine : '#fee2e2'), color: '#f43f5e', fontSize: '12px', fontWeight: '900', cursor: 'pointer', opacity: enabled ? 1 : 0.6 }}
       >
-        Send Test Notification 🔔
+        {t.notifSend}
       </button>
+
+      {message && (
+        <p style={{ fontSize: '11px', color: c.inkSoft, fontWeight: '700', lineHeight: 1.5 }}>{message}</p>
+      )}
     </div>
   );
 }

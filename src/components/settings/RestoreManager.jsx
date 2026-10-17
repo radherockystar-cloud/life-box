@@ -1,23 +1,40 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { RefreshCw, FileUp, Database } from 'lucide-react';
-import { parseBackup, applyBackupData } from '../../utils/dataBackup';
+import {
+  parseBackupFull,
+  applyBackupData,
+  hasInternalSnapshot,
+  internalSnapshotInfo,
+  restoreInternalSnapshot,
+} from '../../utils/dataBackup';
+import { appStorage } from '../../utils/appStorage';
+
+const OLD_SLOT_KEY = 'newlife_system_backup_slot';
 
 export default function RestoreManager({ currentTheme }) {
-  const runRestore = (map, sourceName) => {
-    const ok = window.confirm(
-      `${sourceName} se ${Object.keys(map).length} items restore honge. Abhi ka data in items se replace ho jayega. Aage badhein?`
-    );
-    if (!ok) return;
+  const [busy, setBusy] = useState(false);
 
+  // Confirm poochho, phir restore karo, phir app refresh
+  const confirmAndRun = async (message, task) => {
+    if (busy) return;
+    if (!window.confirm(message)) return;
+    setBusy(true);
     try {
-      applyBackupData(map);
+      await task();
     } catch (err) {
+      setBusy(false);
       alert('Restore poora nahi ho paya: phone ki storage mein jagah kam hai.');
       return;
     }
     alert('Data Restored Successfully! Refreshing app... 🔄✨');
     window.location.reload();
   };
+
+  const runRestore = (full, sourceName) =>
+    confirmAndRun(
+      `${sourceName} se ${Object.keys(full.map).length} items aur ${Object.keys(full.media).length} photos/videos/voices restore honge. Abhi ka data in items se replace ho jayega. Aage badhein?`,
+      () => applyBackupData(full.map, full.media)
+    );
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -26,39 +43,49 @@ export default function RestoreManager({ currentTheme }) {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      let map = null;
+      let full = null;
       try {
-        map = parseBackup(JSON.parse(event.target.result));
+        full = parseBackupFull(JSON.parse(event.target.result));
       } catch (err) {
-        map = null;
+        full = null;
       }
-      if (!map) {
+      if (!full) {
         alert('Invalid Backup File Format! Please upload a valid New Life backup JSON file.');
         return;
       }
-      runRestore(map, 'File');
+      runRestore(full, 'File');
     };
+    reader.onerror = () => alert('Is file ko padh nahi paye. Dobara try karo.');
     reader.readAsText(file);
   };
 
-  const handleRestoreFromInternal = () => {
-    const savedBackup = localStorage.getItem('newlife_system_backup_slot');
+  const handleRestoreFromInternal = async () => {
+    if (await hasInternalSnapshot()) {
+      const info = await internalSnapshotInfo();
+      confirmAndRun(
+        `Internal snapshot se ${info ? info.items : 0} items aur ${info ? info.media : 0} photos/videos/voices restore honge. Abhi ka data in items se replace ho jayega. Aage badhein?`,
+        () => restoreInternalSnapshot()
+      );
+      return;
+    }
+
+    // Bahut purana snapshot (jo abhi tak localStorage mein hi ho)
+    const savedBackup = appStorage.getItem(OLD_SLOT_KEY);
     if (!savedBackup) {
       alert('No internal system backup found!');
       return;
     }
-
-    let map = null;
+    let full = null;
     try {
-      map = parseBackup(JSON.parse(savedBackup));
+      full = parseBackupFull(JSON.parse(savedBackup));
     } catch (err) {
-      map = null;
+      full = null;
     }
-    if (!map) {
+    if (!full) {
       alert('Failed to restore internal backup.');
       return;
     }
-    runRestore(map, 'Internal snapshot');
+    runRestore(full, 'Internal snapshot');
   };
 
   return (

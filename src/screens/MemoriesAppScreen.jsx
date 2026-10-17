@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Search, Trash2, Save, Image as ImageIcon, Share2, Download, X, Heart, Pencil, Play } from 'lucide-react';
 import { useBackHandler } from '../utils/useBackHandler';
+import { moveToBin } from '../utils/binStorage';
+import { saveMedia, deleteMedia, blobToDataUrl } from '../utils/mediaStore';
+import useMediaUrl from '../utils/useMediaUrl';
+import { appStorage } from '../utils/appStorage';
 
 const VAULT_KEY = 'newlife_vault';
-const BIN_KEY = 'newlife_bin';
-const MAX_VIDEO_BYTES = 2.5 * 1024 * 1024; // localStorage chhota hota hai, isliye video ki limit
+const MAX_VIDEO_BYTES = 30 * 1024 * 1024; // video phone ki badi storage (IndexedDB) mein jaati hai; export file badi na ho isliye 30 MB limit
 
 const TAGS = [
   { value: 'Milestone', label: 'Milestone', emoji: '🏆' },
@@ -14,7 +17,7 @@ const TAGS = [
 ];
 const tagMeta = (tag) => TAGS.find((t) => t.value === tag) || { value: tag, label: tag || 'Memory', emoji: '📸' };
 
-const EMPTY_MEMORY = { id: null, title: '', desc: '', tag: 'Milestone', mediaUrl: '', mediaType: 'image' };
+const EMPTY_MEMORY = { id: null, title: '', desc: '', tag: 'Milestone', mediaKey: '', mediaUrl: '', mediaType: 'image' };
 
 const pad = (n) => String(n).padStart(2, '0');
 // Aaj ki date (phone ke time ke hisaab se, UTC nahi, taaki raat/subah ki date galat na ho)
@@ -28,41 +31,55 @@ const prettyDate = (str) => {
   return new Date(y, m - 1, d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-// Photo ko chhota karke (max 1280px, JPEG) save karte hain, taaki storage jaldi full na ho
+// Photo ko chhota karke (max 1600px, JPEG) Blob banate hain, taaki phone ki storage jaldi na bhare
 const compressImage = (file) =>
   new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = reject;
-      img.onload = () => {
-        const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.78));
-      };
-      img.src = reader.result;
+    const src = URL.createObjectURL(file);
+    const img = new Image();
+    img.onerror = () => {
+      URL.revokeObjectURL(src);
+      reject(new Error('Could not read image'));
     };
-    reader.readAsDataURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(src);
+      const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Could not compress image'))), 'image/jpeg', 0.82);
+    };
+    img.src = src;
   });
 
-const readAsDataUrl = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(file);
-  });
+// Card ki photo / video (IndexedDB se aati hai)
+function MemoryThumb({ item, meta }) {
+  const url = useMediaUrl(item.mediaKey, item.mediaUrl);
+  const emojiBox = (
+    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '46px', filter: 'drop-shadow(0 6px 8px rgba(120,20,60,0.35))' }}>{meta.emoji}</div>
+  );
+  if (!url) return emojiBox; // media nahi hai, ya abhi load ho raha hai
+  if (item.mediaType === 'video') {
+    return (
+      <>
+        <video src={url} preload="metadata" muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48', boxShadow: '0 4px 14px rgba(0,0,0,0.3)' }}>
+            <Play size={18} style={{ fill: '#e11d48' }} />
+          </div>
+        </div>
+      </>
+    );
+  }
+  return <img src={url} alt={item.title} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+}
 
 const loadMemories = () => {
   try {
-    const items = JSON.parse(localStorage.getItem(VAULT_KEY) || '[]');
+    const items = JSON.parse(appStorage.getItem(VAULT_KEY) || '[]');
     return Array.isArray(items) ? items.filter((i) => i.type === 'Memory') : [];
   } catch (e) {
     return [];
@@ -111,16 +128,36 @@ export default function MemoriesAppScreen({ onBack }) {
   const [mediaError, setMediaError] = useState('');
   const [storageFull, setStorageFull] = useState(false);
   const [toast, setToast] = useState('');
+  const [pending, setPending] = useState(null); // abhi chuni hui nayi photo/video (save hone tak)
+  const [mediaRemoved, setMediaRemoved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Editor / viewer ki photo ka address
+  const existingUrl = useMediaUrl(currentMemory.mediaKey, currentMemory.mediaUrl);
+  const editorUrl = pending ? pending.previewUrl : mediaRemoved ? '' : existingUrl;
+  const editorType = pending ? pending.type : currentMemory.mediaType;
+  const viewerUrl = useMediaUrl(activeViewer && activeViewer.mediaKey, activeViewer && activeViewer.mediaUrl);
+  const viewerLoading = !!activeViewer && !!(activeViewer.mediaKey || activeViewer.mediaUrl) && !viewerUrl;
+
+  const clearPending = () => {
+    if (pending) URL.revokeObjectURL(pending.previewUrl);
+    setPending(null);
+    setMediaRemoved(false);
+  };
+  const closeEditor = () => {
+    clearPending();
+    setIsEditing(false);
+  };
 
   // Back button closes the viewer / editor
   useBackHandler(activeViewer !== null, () => setActiveViewer(null));
-  useBackHandler(isEditing, () => setIsEditing(false));
+  useBackHandler(isEditing, closeEditor);
 
   useEffect(() => {
     try {
-      const savedVault = JSON.parse(localStorage.getItem(VAULT_KEY) || '[]');
+      const savedVault = JSON.parse(appStorage.getItem(VAULT_KEY) || '[]');
       const otherItems = savedVault.filter((i) => i.type !== 'Memory');
-      localStorage.setItem(VAULT_KEY, JSON.stringify([...memories, ...otherItems]));
+      appStorage.setItem(VAULT_KEY, JSON.stringify([...memories, ...otherItems]));
       setStorageFull(false);
     } catch (e) {
       // Storage full: pehle ye crash karta tha, ab saaf warning dikhate hain
@@ -135,12 +172,14 @@ export default function MemoriesAppScreen({ onBack }) {
   }, [toast]);
 
   const openNew = () => {
+    clearPending();
     setCurrentMemory(EMPTY_MEMORY);
     setMediaError('');
     setIsEditing(true);
   };
 
   const openEdit = (item) => {
+    clearPending();
     setCurrentMemory({ ...EMPTY_MEMORY, ...item });
     setMediaError('');
     setActiveViewer(null);
@@ -153,47 +192,97 @@ export default function MemoriesAppScreen({ onBack }) {
     if (!file) return;
     setMediaError('');
     try {
+      let blob;
+      let type;
       if (file.type.startsWith('video')) {
         if (file.size > MAX_VIDEO_BYTES) {
-          setMediaError('This video is too big. Please pick a video under 2.5 MB.');
+          setMediaError('This video is too big. Please pick a video under 30 MB.');
           return;
         }
-        const url = await readAsDataUrl(file);
-        setCurrentMemory((prev) => ({ ...prev, mediaUrl: url, mediaType: 'video' }));
+        blob = file;
+        type = 'video';
       } else {
-        const url = await compressImage(file);
-        setCurrentMemory((prev) => ({ ...prev, mediaUrl: url, mediaType: 'image' }));
+        blob = await compressImage(file);
+        type = 'image';
       }
+      if (pending) URL.revokeObjectURL(pending.previewUrl);
+      setPending({ blob, type, previewUrl: URL.createObjectURL(blob) });
+      setMediaRemoved(false);
     } catch (err) {
       setMediaError("Couldn't read this file. Please try another one.");
     }
   };
 
-  const handleSave = (e) => {
+  const removeMedia = () => {
+    if (pending) URL.revokeObjectURL(pending.previewUrl);
+    setPending(null);
+    setMediaRemoved(true);
+  };
+
+  const handleSave = async (e) => {
     e.preventDefault();
+    if (saving) return;
     if (!currentMemory.title.trim()) {
       setMediaError('Please add a title for your memory.');
       return;
     }
+    setSaving(true);
+    try {
+      const oldKey = currentMemory.mediaKey || '';
+      let mediaKey = oldKey;
+      let mediaUrl = currentMemory.mediaUrl || '';
+      let mediaType = currentMemory.mediaType || 'image';
+      let mediaMime = currentMemory.mediaMime || '';
 
-    if (currentMemory.id) {
-      setMemories(memories.map((m) => (m.id === currentMemory.id ? currentMemory : m)));
-    } else {
-      const newEntry = {
-        id: Date.now(),
-        title: currentMemory.title.trim(),
-        desc: currentMemory.desc || '',
-        tag: currentMemory.tag || 'Milestone',
-        mediaUrl: currentMemory.mediaUrl || '',
-        mediaType: currentMemory.mediaType || 'image',
-        date: todayLocal(),
-        createdAt: new Date().toISOString(),
-        type: 'Memory',
-      };
-      setMemories([newEntry, ...memories]);
+      if (pending) {
+        try {
+          mediaKey = await saveMedia(pending.blob);
+          mediaUrl = '';
+        } catch (err) {
+          // IndexedDB na chale to chhoti photo purane tareeke se (seedha item mein) rakh lo
+          if (pending.blob.size > 1.5 * 1024 * 1024) {
+            setMediaError("Couldn't save this file on your phone. Please try a smaller photo.");
+            return;
+          }
+          mediaKey = '';
+          mediaUrl = await blobToDataUrl(pending.blob);
+        }
+        mediaType = pending.type;
+        mediaMime = pending.blob.type || '';
+        if (oldKey && oldKey !== mediaKey) await deleteMedia(oldKey).catch(() => {});
+      } else if (mediaRemoved) {
+        if (oldKey) await deleteMedia(oldKey).catch(() => {});
+        mediaKey = '';
+        mediaUrl = '';
+        mediaMime = '';
+        mediaType = 'image';
+      }
+
+      if (currentMemory.id) {
+        const saved = { ...currentMemory, title: currentMemory.title.trim(), mediaKey, mediaUrl, mediaType, mediaMime };
+        setMemories((prev) => prev.map((m) => (m.id === currentMemory.id ? saved : m)));
+      } else {
+        const newEntry = {
+          id: Date.now(),
+          title: currentMemory.title.trim(),
+          desc: currentMemory.desc || '',
+          tag: currentMemory.tag || 'Milestone',
+          mediaKey,
+          mediaUrl,
+          mediaType,
+          mediaMime,
+          date: todayLocal(),
+          createdAt: new Date().toISOString(),
+          type: 'Memory',
+        };
+        setMemories((prev) => [newEntry, ...prev]);
+      }
+      clearPending();
+      setIsEditing(false);
+      setCurrentMemory(EMPTY_MEMORY);
+    } finally {
+      setSaving(false);
     }
-    setIsEditing(false);
-    setCurrentMemory(EMPTY_MEMORY);
   };
 
   const deleteMemory = (id, e) => {
@@ -201,12 +290,10 @@ export default function MemoriesAppScreen({ onBack }) {
     const itemToDelete = memories.find((m) => m.id === id);
     if (!itemToDelete) return;
 
-    try {
-      const existingBin = JSON.parse(localStorage.getItem(BIN_KEY) || '[]');
-      const trashItem = { ...itemToDelete, deletedAt: 'Just now' };
-      localStorage.setItem(BIN_KEY, JSON.stringify([trashItem, ...existingBin]));
-    } catch (err) {
-      // Bin full ho to bhi delete ho jaye
+    // Bin mein bhejo (photo/video Bin mein bhi bachi rehti hai, restore par wapas aati hai)
+    if (!moveToBin(itemToDelete, VAULT_KEY)) {
+      setToast('Could not move to Bin. Phone storage is full.');
+      return;
     }
     setMemories(memories.filter((m) => m.id !== id));
     setActiveViewer(null);
@@ -237,8 +324,10 @@ export default function MemoriesAppScreen({ onBack }) {
   });
 
   const downloadName = (item) => {
-    const mime = (item.mediaUrl || '').substring(5, (item.mediaUrl || '').indexOf(';'));
-    const ext = mime.split('/')[1] || (item.mediaType === 'video' ? 'mp4' : 'jpg');
+    let mime = item.mediaMime || '';
+    if (!mime && (item.mediaUrl || '').startsWith('data:')) mime = item.mediaUrl.substring(5, item.mediaUrl.indexOf(';'));
+    let ext = (mime.split('/')[1] || '').replace('quicktime', 'mov').replace('jpeg', 'jpg');
+    if (!ext) ext = item.mediaType === 'video' ? 'mp4' : 'jpg';
     return `${item.title || 'memory'}.${ext}`;
   };
 
@@ -329,22 +418,7 @@ export default function MemoriesAppScreen({ onBack }) {
               return (
                 <div key={item.id} onClick={() => setActiveViewer(item)} className="mem-card" style={{ ...glass, borderRadius: '24px', overflow: 'hidden', cursor: 'pointer', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ position: 'relative', height: '128px', background: TAG_BG[item.tag] || TAG_BG.Special, overflow: 'hidden' }}>
-                    {item.mediaUrl ? (
-                      item.mediaType === 'video' ? (
-                        <>
-                          <video src={item.mediaUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48', boxShadow: '0 4px 14px rgba(0,0,0,0.3)' }}>
-                              <Play size={18} style={{ fill: '#e11d48' }} />
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <img src={item.mediaUrl} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      )
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '46px', filter: 'drop-shadow(0 6px 8px rgba(120,20,60,0.35))' }}>{meta.emoji}</div>
-                    )}
+                    <MemoryThumb item={item} meta={meta} />
                     <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '50%', background: 'linear-gradient(180deg,transparent,rgba(60,10,30,0.45))' }} />
                     <span style={{ position: 'absolute', left: '10px', bottom: '8px', fontSize: '9.5px', fontWeight: 900, padding: '3px 9px', borderRadius: '10px', background: 'rgba(255,255,255,0.92)', color: '#be123c', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
                       {meta.emoji} {meta.label}
@@ -382,15 +456,16 @@ export default function MemoriesAppScreen({ onBack }) {
           <Plus size={28} strokeWidth={3} />
         </button>
       </div>
+
       {/* Create / Edit Memory */}
       {isEditing && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', flexDirection: 'column', padding: '18px', background: 'radial-gradient(90% 40% at 0% 0%,rgba(251,113,133,.28),transparent 60%),radial-gradient(80% 40% at 100% 100%,rgba(244,114,182,.28),transparent 62%),linear-gradient(180deg,#fff8fb,#ffeaf3)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexShrink: 0 }}>
-            <button onClick={() => setIsEditing(false)} aria-label="Close" style={{ ...glass, width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48', cursor: 'pointer' }}>
+            <button onClick={closeEditor} aria-label="Close" style={{ ...glass, width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48', cursor: 'pointer' }}>
               <ArrowLeft size={20} />
             </button>
             <h3 style={{ fontSize: '15px', fontWeight: 900, color: INK }}>{currentMemory.id ? 'Edit Memory' : 'New Memory'}</h3>
-            <button onClick={handleSave} style={{ ...roseBtn, height: '44px', padding: '0 18px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 900, cursor: 'pointer' }}>
+            <button onClick={handleSave} disabled={saving} style={{ ...roseBtn, opacity: saving ? 0.7 : 1, height: '44px', padding: '0 18px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 900, cursor: 'pointer' }}>
               <Save size={16} /> Save
             </button>
           </div>
@@ -422,11 +497,11 @@ export default function MemoriesAppScreen({ onBack }) {
             </div>
 
             <label style={{ ...glass, position: 'relative', height: '170px', borderRadius: '24px', border: '2px dashed rgba(244,63,94,0.45)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', overflow: 'hidden', cursor: 'pointer' }}>
-              {currentMemory.mediaUrl ? (
-                currentMemory.mediaType === 'video' ? (
-                  <video src={currentMemory.mediaUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {editorUrl ? (
+                editorType === 'video' ? (
+                  <video src={editorUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
-                  <img src={currentMemory.mediaUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={editorUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 )
               ) : (
                 <>
@@ -434,14 +509,14 @@ export default function MemoriesAppScreen({ onBack }) {
                     <ImageIcon size={22} />
                   </div>
                   <span style={{ fontSize: '13px', fontWeight: 900, color: INK }}>Tap to add a photo or video</span>
-                  <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#b0587a' }}>Photos are shrunk automatically. Videos up to 2.5 MB.</span>
+                  <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#b0587a' }}>Photos are shrunk automatically. Videos up to 30 MB.</span>
                 </>
               )}
               <input type="file" accept="image/*,video/*" onChange={handleMediaUpload} style={{ display: 'none' }} />
             </label>
 
-            {currentMemory.mediaUrl && (
-              <button type="button" onClick={() => setCurrentMemory({ ...currentMemory, mediaUrl: '', mediaType: 'image' })} style={{ alignSelf: 'flex-start', fontSize: '12px', fontWeight: 900, color: '#e11d48', padding: '4px 6px', cursor: 'pointer' }}>
+            {editorUrl && (
+              <button type="button" onClick={removeMedia} style={{ alignSelf: 'flex-start', fontSize: '12px', fontWeight: 900, color: '#e11d48', padding: '4px 6px', cursor: 'pointer' }}>
                 Remove photo / video
               </button>
             )}
@@ -472,12 +547,14 @@ export default function MemoriesAppScreen({ onBack }) {
           </div>
 
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', margin: '14px 0', overflow: 'auto', borderRadius: '26px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)' }}>
-            {activeViewer.mediaUrl ? (
+            {viewerUrl ? (
               activeViewer.mediaType === 'video' ? (
-                <video src={activeViewer.mediaUrl} controls style={{ maxHeight: '55vh', width: '100%', objectFit: 'contain', borderRadius: '18px' }} />
+                <video src={viewerUrl} controls style={{ maxHeight: '55vh', width: '100%', objectFit: 'contain', borderRadius: '18px' }} />
               ) : (
-                <img src={activeViewer.mediaUrl} alt={activeViewer.title} style={{ maxHeight: '55vh', width: '100%', objectFit: 'contain', borderRadius: '18px' }} />
+                <img src={viewerUrl} alt={activeViewer.title} style={{ maxHeight: '55vh', width: '100%', objectFit: 'contain', borderRadius: '18px' }} />
               )
+            ) : viewerLoading ? (
+              <div style={{ margin: '40px 0 10px', fontSize: '13px', fontWeight: 800, color: 'rgba(255,255,255,0.7)' }}>Loading...</div>
             ) : (
               <div style={{ fontSize: '64px', margin: '30px 0 10px', filter: 'drop-shadow(0 8px 12px rgba(0,0,0,0.4))' }}>{tagMeta(activeViewer.tag).emoji}</div>
             )}
@@ -489,8 +566,8 @@ export default function MemoriesAppScreen({ onBack }) {
           </div>
 
           <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
-            {activeViewer.mediaUrl ? (
-              <a href={activeViewer.mediaUrl} download={downloadName(activeViewer)} style={{ flex: 1, height: '48px', borderRadius: '16px', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontSize: '12.5px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none' }}>
+            {viewerUrl ? (
+              <a href={viewerUrl} download={downloadName(activeViewer)} style={{ flex: 1, height: '48px', borderRadius: '16px', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontSize: '12.5px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none' }}>
                 <Download size={16} /> Download
               </a>
             ) : (

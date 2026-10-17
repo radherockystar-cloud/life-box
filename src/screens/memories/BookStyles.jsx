@@ -1,19 +1,20 @@
 import React from "react";
 
 // All CSS for the photo book (cover, page caption, page-turn animations).
+// Rang ab pink-wine hain (Notes jaisa theme). Animations aur layout bilkul pehle jaise.
 // Kept exactly as it was in MemoriesScreen.jsx.
 export default function BookStyles() {
   return (
         <style>{`
           .book-cover {
-            background-color: #241a14;
+            background-color: #3b0a1f;
             box-shadow:
-              inset 0 0 50px rgba(0,0,0,0.55),
+              inset 0 0 50px rgba(60,0,30,0.55),
               inset 0 0 2px rgba(255,255,255,0.25);
           }
 
           .page-caption {
-            color: #5a4632;
+            color: #6f2f4b;
             font-weight: 600;
             font-family: Georgia, 'Times New Roman', serif;
             font-style: italic;
@@ -21,8 +22,8 @@ export default function BookStyles() {
             line-height: 1.5;
             text-shadow:
               0 1px 0 #ffffff,
-              0 2px 0 #f1e9dd,
-              0 3px 2px rgba(0,0,0,0.12);
+              0 2px 0 #ffd9e6,
+              0 3px 2px rgba(130,10,60,0.14);
             overflow-wrap: anywhere;
             word-break: break-word;
             white-space: pre-wrap;
@@ -108,17 +109,17 @@ export default function BookStyles() {
           @keyframes bookPageNext {
             0% {
               transform: rotateY(0deg);
-              box-shadow: 0 15px 40px rgba(0,0,0,0.20);
+              box-shadow: 0 15px 40px rgba(130,10,60,0.22);
             }
 
             45% {
               transform: rotateY(-82deg);
-              box-shadow: 18px 18px 35px rgba(0,0,0,0.30);
+              box-shadow: 18px 18px 35px rgba(130,10,60,0.32);
             }
 
             100% {
               transform: rotateY(0deg);
-              box-shadow: 0 15px 40px rgba(0,0,0,0.20);
+              box-shadow: 0 15px 40px rgba(130,10,60,0.22);
             }
           }
 
@@ -129,7 +130,7 @@ export default function BookStyles() {
 
             45% {
               transform: rotateY(82deg);
-              box-shadow: -18px 18px 35px rgba(0,0,0,0.30);
+              box-shadow: -18px 18px 35px rgba(130,10,60,0.32);
             }
 
             100% {

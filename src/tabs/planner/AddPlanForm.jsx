@@ -2,37 +2,58 @@ import React, { useState } from 'react';
 import { X, Lock } from 'lucide-react';
 import { PLAN_KINDS, getKind } from './plansStorage';
 import { toDateStr } from './festivalsData';
-
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+import { useApp } from '../../context/AppContext';
+import { monthLong } from '../../utils/dateLabels';
 
 const pad = (n) => String(n).padStart(2, '0');
 
-const fieldStyle = {
-  width: '100%',
-  background: 'rgba(255,255,255,0.16)',
-  border: '1px solid rgba(255,255,255,0.4)',
-  borderRadius: '14px',
-  padding: '12px',
-  color: '#ffffff',
-  fontSize: '13px',
-  fontWeight: 800,
-  outline: 'none',
-  boxShadow: 'inset 0 2px 6px rgba(30,20,100,0.2)',
-  colorScheme: 'dark',
+// Notes jaisa pink-white glossy glow theme (koi blur nahi)
+// Rang ab theme (light/dark) ke hisaab se makeStyles(c) se aate hain.
+const makeStyles = (c) => {
+  const INK = c.text;
+
+  const fieldStyle = {
+    width: '100%',
+    background: c.isDark ? c.surfaceAlt : 'linear-gradient(160deg, #ffffff 0%, rgba(255,255,255,0.85) 55%, rgba(255,234,243,0.96) 100%)',
+    border: '1px solid rgba(251,113,133,0.3)',
+    borderTop: '1px solid ' + c.glassTop,
+    borderRadius: '14px',
+    padding: '12px',
+    color: INK,
+    fontSize: '13px',
+    fontWeight: 800,
+    outline: 'none',
+    boxShadow: c.isDark ? 'none' : 'inset 0 2px 0 #ffffff, 0 8px 16px -10px rgba(244,63,94,0.35)',
+    colorScheme: c.isDark ? 'dark' : 'light',
+  };
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: '10px',
+    fontWeight: 900,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color: c.isDark ? c.textSub : '#a8264f',
+    marginBottom: '6px',
+  };
+
+  return { INK, fieldStyle, labelStyle };
 };
 
-const labelStyle = {
-  display: 'block',
-  fontSize: '10px',
-  fontWeight: 900,
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  color: 'rgba(255,255,255,0.8)',
-  marginBottom: '6px',
-};
+const FORM_CSS = `
+.pl-field::placeholder{color:rgba(190,24,93,.4)}
+.pl-field:focus{border-color:rgba(244,63,94,.85)!important;box-shadow:0 0 0 3px rgba(244,63,94,.15),0 0 22px rgba(244,63,94,.25)!important}
+[data-theme="dark"] .pl-field::placeholder{color:rgba(253,164,175,.5)}
+`;
 
 // Add or edit a plan.  plan = null -> new plan.  defaultDate = 'YYYY-MM-DD' to start with.
 export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
+  // Theme (c) + language (tx) poore app wale context se
+  const { c, t: tx, currentLang } = useApp();
+  const { INK, fieldStyle, labelStyle } = makeStyles(c);
+  // Plan type ka naam: agar translation (kind_<id>) mile to wo, warna plansStorage wala label
+  const kindLabel = (k) => tx['kind_' + k.id] || k.label;
+
   const startDate = plan ? plan.date : defaultDate || toDateStr(new Date());
   const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
   const thisYear = new Date().getFullYear();
@@ -64,7 +85,7 @@ export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
 
   const handleSave = () => {
     if (!title.trim()) {
-      setError('Please write what this plan is about.');
+      setError(tx.apErrTitle);
       return;
     }
 
@@ -81,9 +102,10 @@ export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9100, display: 'flex', alignItems: 'flex-end' }}>
+      <style>{FORM_CSS}</style>
       <div
         onClick={onClose}
-        style={{ position: 'absolute', inset: 0, background: 'rgba(15,10,50,0.6)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+        style={{ position: 'absolute', inset: 0, background: 'rgba(60,10,30,0.5)' }}
       />
 
       <div
@@ -94,24 +116,26 @@ export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
           overflowY: 'auto',
           borderRadius: '32px 32px 0 0',
           padding: '18px 18px 28px',
-          background: 'linear-gradient(160deg, rgba(79,70,229,0.96), rgba(124,58,237,0.96) 55%, rgba(190,40,120,0.96))',
-          border: '1px solid rgba(255,255,255,0.35)',
-          boxShadow: '0 -20px 50px rgba(20,10,80,0.5), inset 0 1px 0 rgba(255,255,255,0.5)',
-          color: '#ffffff',
+          background: c.isDark ? '#1e293b' : 'linear-gradient(170deg, #ffffff 0%, #fff3f8 55%, #ffe3ef 100%)',
+          border: '1px solid rgba(251,113,133,0.3)',
+          borderBottom: 'none',
+          borderTop: '1px solid ' + c.glassTop,
+          boxShadow: c.isDark ? '0 -18px 50px -12px rgba(0,0,0,0.6)' : '0 -18px 50px -12px rgba(244,63,94,0.45), inset 0 2px 0 #ffffff',
+          color: INK,
         }}
       >
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
           <div>
-            <h3 style={{ fontSize: '17px', fontWeight: 900 }}>{plan ? 'Edit Plan' : 'New Plan'}</h3>
-            <p style={{ fontSize: '10.5px', fontWeight: 700, color: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-              <Lock size={10} /> Private. It never shows on the calendar.
+            <h3 style={{ fontSize: '17px', fontWeight: 900, color: INK, textShadow: '0 0 16px rgba(251,113,133,0.4)' }}>{plan ? tx.apEdit : tx.apNew}</h3>
+            <p style={{ fontSize: '10.5px', fontWeight: 700, color: c.textSub, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+              <Lock size={10} /> {tx.apPrivate}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            style={{ width: '34px', height: '34px', borderRadius: '12px', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.4)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            style={{ width: '38px', height: '38px', borderRadius: '13px', background: c.isDark ? c.surfaceAlt : 'linear-gradient(160deg, #ffffff 0%, rgba(255,234,243,0.96) 100%)', border: '1px solid rgba(251,113,133,0.3)', borderTop: '1px solid ' + c.glassTop, boxShadow: c.isDark ? 'none' : 'inset 0 2px 0 #ffffff, 0 8px 16px -8px rgba(244,63,94,0.4)', color: c.accentDeep, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
           >
             <X size={16} />
           </button>
@@ -129,10 +153,11 @@ export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
                 style={{
                   padding: '10px 4px',
                   borderRadius: '16px',
-                  border: active ? '1px solid #ffffff' : '1px solid rgba(255,255,255,0.3)',
-                  background: active ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.1)',
-                  boxShadow: active ? '0 0 16px rgba(255,255,255,0.45)' : 'none',
-                  color: '#fff',
+                  border: active ? '1px solid rgba(244,63,94,0.8)' : '1px solid rgba(251,113,133,0.25)',
+                  borderTop: '1px solid ' + c.glassTop,
+                  background: active ? c.selectedBg : (c.isDark ? c.surface : 'linear-gradient(160deg, #ffffff 0%, rgba(255,234,243,0.9) 100%)'),
+                  boxShadow: active ? (c.isDark ? '0 0 18px -2px rgba(244,63,94,0.55)' : 'inset 0 2px 0 #ffffff, 0 0 18px -2px rgba(244,63,94,0.55)') : (c.isDark ? 'none' : 'inset 0 2px 0 #ffffff, 0 6px 12px -8px rgba(244,63,94,0.3)'),
+                  color: active ? c.selectedText : (c.isDark ? c.textSub : '#a8264f'),
                   cursor: 'pointer',
                   display: 'flex',
                   flexDirection: 'column',
@@ -141,7 +166,7 @@ export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
                 }}
               >
                 <span style={{ fontSize: '20px' }}>{k.emoji}</span>
-                <span style={{ fontSize: '9.5px', fontWeight: 900 }}>{k.label}</span>
+                <span style={{ fontSize: '9.5px', fontWeight: 900 }}>{kindLabel(k)}</span>
               </button>
             );
           })}
@@ -149,7 +174,7 @@ export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
 
         {/* Title */}
         <div style={{ marginBottom: '12px' }}>
-          <label style={labelStyle}>What is it?</label>
+          <label style={labelStyle}>{tx.apWhat}</label>
           <input
             type="text"
             value={title}
@@ -157,30 +182,30 @@ export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
               setTitle(e.target.value);
               setError('');
             }}
-            placeholder="e.g., Mom's Birthday"
-            className="placeholder:text-white/50"
+            placeholder={tx.apWhatPh}
+            className="pl-field"
             style={fieldStyle}
           />
-          {error && <p style={{ fontSize: '11px', fontWeight: 800, color: '#ffe08a', marginTop: '6px' }}>{error}</p>}
+          {error && <p style={{ fontSize: '11px', fontWeight: 800, color: c.selectedText, marginTop: '6px' }}>{error}</p>}
         </div>
 
         {/* Date */}
         <div style={{ marginBottom: '12px' }}>
-          <label style={labelStyle}>Date</label>
+          <label style={labelStyle}>{tx.apDate}</label>
           <div style={{ display: 'grid', gridTemplateColumns: '0.8fr 1.5fr 1fr', gap: '8px' }}>
-            <select value={safeDay} onChange={(e) => setDay(Number(e.target.value))} style={fieldStyle}>
+            <select value={safeDay} onChange={(e) => setDay(Number(e.target.value))} className="pl-field" style={fieldStyle}>
               {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
-                <option key={d} value={d} style={{ color: '#111827' }}>{d}</option>
+                <option key={d} value={d} style={{ color: c.isDark ? '#f9fafb' : '#111827', background: c.isDark ? '#1e293b' : undefined }}>{d}</option>
               ))}
             </select>
-            <select value={month} onChange={(e) => setMonth(Number(e.target.value))} style={fieldStyle}>
-              {MONTHS.map((name, i) => (
-                <option key={name} value={i + 1} style={{ color: '#111827' }}>{name}</option>
+            <select value={month} onChange={(e) => setMonth(Number(e.target.value))} className="pl-field" style={fieldStyle}>
+              {Array.from({ length: 12 }, (_, i) => i).map((i) => (
+                <option key={i} value={i + 1} style={{ color: c.isDark ? '#f9fafb' : '#111827', background: c.isDark ? '#1e293b' : undefined }}>{monthLong(currentLang, i)}</option>
               ))}
             </select>
-            <select value={year} onChange={(e) => setYear(Number(e.target.value))} style={fieldStyle}>
+            <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="pl-field" style={fieldStyle}>
               {years.map((y) => (
-                <option key={y} value={y} style={{ color: '#111827' }}>{y}</option>
+                <option key={y} value={y} style={{ color: c.isDark ? '#f9fafb' : '#111827', background: c.isDark ? '#1e293b' : undefined }}>{y}</option>
               ))}
             </select>
           </div>
@@ -189,11 +214,11 @@ export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
         {/* Time + repeat */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
           <div>
-            <label style={labelStyle}>Remind me at</label>
-            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} style={fieldStyle} />
+            <label style={labelStyle}>{tx.apRemindAt}</label>
+            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="pl-field" style={fieldStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Every year</label>
+            <label style={labelStyle}>{tx.apEveryYear}</label>
             <button
               type="button"
               onClick={() => setRepeatYearly(!repeatYearly)}
@@ -206,13 +231,14 @@ export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
                 textAlign: 'left',
               }}
             >
-              <span>{repeatYearly ? 'Yes, repeat' : 'No, once'}</span>
+              <span>{repeatYearly ? tx.apYes : tx.apNo}</span>
               <span
                 style={{
                   width: '38px',
                   height: '22px',
                   borderRadius: '11px',
-                  background: repeatYearly ? '#34d399' : 'rgba(255,255,255,0.3)',
+                  background: repeatYearly ? 'linear-gradient(160deg, #fb7185, #e11d48)' : (c.isDark ? 'rgba(251,113,133,0.25)' : 'rgba(190,24,93,0.2)'),
+                  boxShadow: repeatYearly ? '0 0 12px rgba(244,63,94,0.45)' : 'inset 0 2px 4px rgba(190,24,93,0.2)',
                   position: 'relative',
                   transition: 'background 0.2s',
                 }}
@@ -227,7 +253,7 @@ export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
                     borderRadius: '9px',
                     background: '#fff',
                     transition: 'left 0.2s',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    boxShadow: '0 2px 4px rgba(130,10,60,0.35)',
                   }}
                 />
               </span>
@@ -237,22 +263,20 @@ export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
 
         {/* Note */}
         <div style={{ marginBottom: '12px' }}>
-          <label style={labelStyle}>Note (optional)</label>
+          <label style={labelStyle}>{tx.apNote}</label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}
-            placeholder="Gift idea, place, anything you want to remember..."
-            className="placeholder:text-white/50"
+            placeholder={tx.apNotePh}
+            className="pl-field"
             style={{ ...fieldStyle, resize: 'none', fontWeight: 700 }}
           />
         </div>
 
         {/* Info */}
-        <p style={{ fontSize: '11px', fontWeight: 700, color: isInPast ? '#ffe08a' : 'rgba(255,255,255,0.85)', marginBottom: '14px', lineHeight: 1.5 }}>
-          {isInPast
-            ? '⚠️ This date has already passed, so no reminder will be sent.'
-            : '🔔 You will get a reminder 7 days before and again on the day.'}
+        <p style={{ fontSize: '11px', fontWeight: 700, color: isInPast ? (c.isDark ? '#fbbf24' : '#b45309') : c.textSub, marginBottom: '14px', lineHeight: 1.5 }}>
+          {isInPast ? tx.apPast : tx.apInfo}
         </p>
 
         <button
@@ -262,16 +286,17 @@ export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
             width: '100%',
             padding: '14px',
             borderRadius: '18px',
-            border: '1px solid rgba(255,255,255,0.7)',
-            background: 'linear-gradient(135deg, #ffffff, #ede9fe)',
-            color: '#4c1d95',
+            background: 'linear-gradient(160deg, #fb7185 0%, #e11d48 55%, #be123c 100%)',
+            border: '1px solid rgba(255,255,255,0.5)',
+            borderTop: '1px solid rgba(255,255,255,0.85)',
+            color: '#ffffff',
             fontSize: '14px',
             fontWeight: 900,
             cursor: 'pointer',
-            boxShadow: '0 10px 24px rgba(20,10,80,0.35)',
+            boxShadow: 'inset 0 1.5px 0 rgba(255,255,255,0.65), inset 0 -6px 12px -6px rgba(80,0,40,0.5), 0 8px 18px -4px rgba(225,29,72,0.65), 0 0 24px rgba(244,63,94,0.5)',
           }}
         >
-          {plan ? 'Save Changes ✅' : 'Save Plan ✅'}
+          {plan ? tx.apSaveChanges : tx.apSavePlan}
         </button>
       </div>
     </div>

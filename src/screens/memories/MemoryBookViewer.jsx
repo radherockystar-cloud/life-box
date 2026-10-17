@@ -1,6 +1,9 @@
 import React from "react";
 import { X } from "lucide-react";
 import BookStyles from "./BookStyles";
+import { MEMORIES_CSS } from "./memoriesTheme";
+import { MEMORIES_DARK_CSS } from "./memoriesDark";
+import { useApp } from "../../context/AppContext";
 
 // Full-screen photo book (cover + pages, swipe / tap to turn).
 export default function MemoryBookViewer({
@@ -13,6 +16,8 @@ export default function MemoryBookViewer({
   handleTouchEnd,
   handleBookTap,
 }) {
+    // Language (t) poore app wale context se
+    const { t } = useApp();
     const totalSlides = selectedMemory.pages.length + 1; // cover + photos
     const isCoverPage = currentPage === 0;
     const contentPage = !isCoverPage
@@ -22,16 +27,19 @@ export default function MemoryBookViewer({
 
   return (
       <div
-        className="fixed inset-0 z-[100] bg-[#c9c2b4] flex flex-col overflow-hidden"
+        className="mm-desk fixed inset-0 z-[100] flex flex-col overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
+        <style>{`${MEMORIES_CSS}
+${MEMORIES_DARK_CSS}`}</style>
+
         {/* BOOK HEADER */}
 
         <div className="h-14 shrink-0 flex items-center px-4 gap-3 absolute top-0 left-0 right-0 z-30">
           <button
             onClick={closeBook}
-            className="w-10 h-10 rounded-full bg-white/90 backdrop-blur shadow-sm flex items-center justify-center text-gray-700"
+            className="mm-icon w-11 h-11 flex items-center justify-center"
           >
             <X size={21} />
           </button>
@@ -54,14 +62,14 @@ export default function MemoryBookViewer({
           >
             {/* GROUND SHADOW */}
 
-            <div className="absolute left-[6%] right-[2%] bottom-[-16px] h-6 rounded-[50%] bg-black/35 blur-lg" />
+            <div className="absolute left-[6%] right-[2%] bottom-[-16px] h-6 rounded-[50%] bg-[rgba(150,10,70,0.3)] blur-lg" />
 
             {/* STACKED PAGE EDGES - makes it read as a real, thick book */}
 
-            <div className="absolute inset-0 translate-x-[8px] translate-y-[7px] rounded-[8px] bg-[#d3ccbe] shadow-[0_10px_20px_rgba(0,0,0,0.25)]" />
-            <div className="absolute inset-0 translate-x-[6px] translate-y-[5px] rounded-[8px] bg-[#ddd6c8]" />
-            <div className="absolute inset-0 translate-x-[4px] translate-y-[3px] rounded-[8px] bg-[#e7e1d4]" />
-            <div className="absolute inset-0 translate-x-[2px] translate-y-[1.5px] rounded-[8px] bg-[#f2ede2]" />
+            <div className="absolute inset-0 translate-x-[8px] translate-y-[7px] rounded-[8px] bg-[#f0b5c8] shadow-[0_10px_20px_rgba(130,10,60,0.25)]" />
+            <div className="absolute inset-0 translate-x-[6px] translate-y-[5px] rounded-[8px] bg-[#f5c6d5]" />
+            <div className="absolute inset-0 translate-x-[4px] translate-y-[3px] rounded-[8px] bg-[#f9d8e3]" />
+            <div className="absolute inset-0 translate-x-[2px] translate-y-[1.5px] rounded-[8px] bg-[#fde9f0]" />
 
             {/* CURRENT PAGE / COVER */}
 
@@ -72,7 +80,7 @@ export default function MemoryBookViewer({
                 rounded-[8px]
                 overflow-hidden
                 origin-left
-                shadow-[0_18px_45px_rgba(0,0,0,0.4)]
+                shadow-[0_18px_45px_rgba(130,10,60,0.4)]
                 ${isCoverPage ? "book-cover" : "bg-white"}
                 ${isTurning ? "page-turning" : ""}
                 ${
@@ -101,7 +109,7 @@ export default function MemoryBookViewer({
                         className="absolute inset-0 w-full h-full object-cover scale-125"
                         style={{
                           filter:
-                            "blur(20px) saturate(1.6) brightness(0.5)",
+                            "blur(14px) saturate(1.6) brightness(0.5)",
                         }}
                         draggable="false"
                       />
@@ -126,7 +134,7 @@ export default function MemoryBookViewer({
                     </div>
 
                     <p className="cover-sub">
-                      PHOTOBOOK OF MEMORIES
+                      {t.memCoverSub}
                     </p>
 
                     <p className="cover-date">
@@ -187,7 +195,7 @@ export default function MemoryBookViewer({
 
                     {/* PAGE NUMBER */}
 
-                    <div className="text-center text-[9px] text-gray-300 tracking-[0.2em] pt-1 shrink-0">
+                    <div className="text-center text-[9px] text-[#d9a3b8] tracking-[0.2em] pt-1 shrink-0">
                       {currentPage + 1} / {totalSlides}
                     </div>
                   </div>
@@ -201,7 +209,7 @@ export default function MemoryBookViewer({
               <div
                 className={`
                   absolute inset-0
-                  bg-[#f5f1e8]
+                  bg-[#fff5f8]
                   rounded-[8px]
                   pointer-events-none
                   ${
@@ -226,7 +234,7 @@ export default function MemoryBookViewer({
                   className={`rounded-full transition-all duration-300 ${
                     index === currentPage
                       ? "w-4 h-1.5 bg-rose-500"
-                      : "w-1.5 h-1.5 bg-black/20"
+                      : "w-1.5 h-1.5 bg-[rgba(190,24,93,0.22)]"
                   }`}
                 />
               )

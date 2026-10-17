@@ -1,26 +1,31 @@
 import React, { useState } from 'react';
-import { Upload, ShieldCheck, Clock, CheckCircle2 } from 'lucide-react';
-import { buildBackupObject } from '../../utils/dataBackup';
+import { Upload, ShieldCheck, Clock, CheckCircle2, Loader2 } from 'lucide-react';
+import { createInternalSnapshot } from '../../utils/dataBackup';
+import { appStorage } from '../../utils/appStorage';
 
 export default function BackupManager({ currentTheme }) {
+  const [busy, setBusy] = useState(false);
   const [lastBackupTime, setLastBackupTime] = useState(() => {
-    return localStorage.getItem('newlife_last_backup_time') || 'Never';
+    return appStorage.getItem('newlife_last_backup_time') || 'Never';
   });
 
-  const handleCreateBackup = () => {
+  const handleCreateBackup = async () => {
+    if (busy) return;
+    setBusy(true);
     try {
-      const backup = buildBackupObject();
+      // Text data + photos/videos/voices ki copy phone ki badi storage (IndexedDB) mein
+      const { items, media } = await createInternalSnapshot();
       const timeString = new Date().toLocaleString();
 
-      localStorage.setItem('newlife_system_backup_slot', JSON.stringify(backup));
-      localStorage.setItem('newlife_last_backup_time', timeString);
+      appStorage.setItem('newlife_last_backup_time', timeString);
       setLastBackupTime(timeString);
 
-      alert(`System State Backup Created Successfully (${Object.keys(backup.data).length} items)! 🛡️✨`);
+      alert(`System State Backup Created Successfully (${items} items, ${media} photos/videos/voices)! 🛡️✨`);
     } catch (err) {
-      // Voice notes / photos can make the data big, and the browser storage can be full
-      localStorage.removeItem('newlife_system_backup_slot');
+      // Phone ki storage full ho sakti hai
       alert('Backup nahi ban paya: phone ki storage mein jagah kam hai. Export Data se JSON file download karo.');
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -41,13 +46,14 @@ export default function BackupManager({ currentTheme }) {
           <span style={{ fontSize: '11px', fontWeight: '800', color: '#059669' }}>Last Backup: {lastBackupTime}</span>
         </div>
         <p style={{ fontSize: '11px', color: '#6b7280', fontWeight: '700', lineHeight: '1.5' }}>
-          Store an instant snapshot of your complete app data inside your browser storage securely.
+          Store an instant copy of your complete app data (including photos, videos and voices) on this phone. It uses extra phone storage and is lost if you uninstall the app, so also download a JSON file from Export Data for safety.
         </p>
         <button 
           onClick={handleCreateBackup}
-          style={{ width: '100%', padding: '12px', borderRadius: '14px', background: 'linear-gradient(135deg, #059669, #047857)', color: '#ffffff', border: 'none', fontSize: '12px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(5,150,105,0.3)' }}
+          disabled={busy}
+          style={{ width: '100%', padding: '12px', borderRadius: '14px', background: 'linear-gradient(135deg, #059669, #047857)', color: '#ffffff', border: 'none', fontSize: '12px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(5,150,105,0.3)', opacity: busy ? 0.7 : 1 }}
         >
-          <ShieldCheck size={16} /> Create Instant Backup 🛡️
+          {busy ? <><Loader2 size={16} className="animate-spin" /> Creating backup...</> : <><ShieldCheck size={16} /> Create Instant Backup 🛡️</>}
         </button>
       </div>
     </div>

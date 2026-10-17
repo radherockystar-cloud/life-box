@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useBackHandler } from "../utils/useBackHandler";
 import { moveToBin } from "../utils/binStorage";
+import { useApp } from "../context/AppContext";
 import {
   STORAGE_KEY,
   loadMemories,
@@ -12,6 +13,9 @@ import MemoryCreateForm from "./memories/MemoryCreateForm";
 import MemoryBookViewer from "./memories/MemoryBookViewer";
 
 export default function MemoriesScreen() {
+  // Language (t) poore app wale context se
+  const { t } = useApp();
+
   const [searchQuery, setSearchQuery] = useState("");
 
   const [memories, setMemories] = useState(loadMemories);
@@ -32,7 +36,7 @@ export default function MemoriesScreen() {
 
   useEffect(() => {
     if (!saveMemories(memories)) {
-      alert("Phone ki storage full hai, ye memory save nahi ho payi. Kuch purani memories ya photos hata kar dobara try karo.");
+      alert(t.memAlertFull);
     }
   }, [memories]);
 
@@ -126,12 +130,12 @@ export default function MemoriesScreen() {
 
   const saveMemory = () => {
     if (!memoryTitle.trim()) {
-      alert("Memory ka title likho.");
+      alert(t.memAlertTitle);
       return;
     }
 
     if (pages.length === 0) {
-      alert("Kam se kam 1 photo add karo.");
+      alert(t.memAlertPhoto);
       return;
     }
 
@@ -228,9 +232,7 @@ export default function MemoriesScreen() {
   // --------------------------------
 
   const deleteMemory = (id) => {
-    const ok = window.confirm(
-      "Kya tum ye memory delete karna chahte ho?"
-    );
+    const ok = window.confirm(t.memConfirmDelete);
 
     if (!ok) return;
 
@@ -244,9 +246,7 @@ export default function MemoriesScreen() {
       );
 
       if (!savedInBin) {
-        const forceDelete = window.confirm(
-          "Bin mein jagah nahi hai. Ye memory hamesha ke liye delete ho jayegi. Pakka delete karna hai?"
-        );
+        const forceDelete = window.confirm(t.memConfirmBinFull);
 
         if (!forceDelete) return;
       }
@@ -311,9 +311,7 @@ export default function MemoriesScreen() {
 
     if (
       hasContent &&
-      !window.confirm(
-        "Memory abhi save nahi hui hai. Bina save kiye bahar jana hai? Photos hat jayengi."
-      )
+      !window.confirm(t.memConfirmDiscard)
     ) {
       return;
     }

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Lock, Unlock, Fingerprint, KeyRound } from 'lucide-react';
+import { appStorage } from '../../utils/appStorage';
 
 export default function AppLockManager({ currentTheme }) {
   const [isLocked, setIsLocked] = useState(() => {
-    return localStorage.getItem('newlife_lock_enabled') === 'true';
+    return appStorage.getItem('newlife_lock_enabled') === 'true';
   });
   const [inputPin, setInputPin] = useState('');
 
@@ -13,8 +14,8 @@ export default function AppLockManager({ currentTheme }) {
       alert('Passcode must be at least 4 digits!');
       return;
     }
-    localStorage.setItem('newlife_passcode', inputPin);
-    localStorage.setItem('newlife_lock_enabled', 'true');
+    appStorage.setItem('newlife_passcode', inputPin);
+    appStorage.setItem('newlife_lock_enabled', 'true');
     setIsLocked(true);
     setInputPin('');
     alert('App Lock & Passcode Enabled Successfully! 🔒');
@@ -22,8 +23,8 @@ export default function AppLockManager({ currentTheme }) {
   };
 
   const handleDisableLock = () => {
-    localStorage.setItem('newlife_lock_enabled', 'false');
-    localStorage.removeItem('newlife_passcode');
+    appStorage.setItem('newlife_lock_enabled', 'false');
+    appStorage.removeItem('newlife_passcode');
     setIsLocked(false);
     setInputPin('');
     alert('App Lock Disabled! 🔓');

@@ -1,4 +1,5 @@
 import { moveToBin } from '../../utils/binStorage';
+import { appStorage } from '../../utils/appStorage';
 
 // Same key the old planner used, so plans saved before are not lost
 export const PLANS_KEY = 'lifebox_planner_plans';
@@ -28,7 +29,7 @@ const normalizePlan = (plan) => ({
 
 export const loadPlans = () => {
   try {
-    const saved = JSON.parse(localStorage.getItem(PLANS_KEY) || '[]');
+    const saved = JSON.parse(appStorage.getItem(PLANS_KEY) || '[]');
     if (!Array.isArray(saved)) return [];
     return saved.filter((p) => p && p.title && isValidDate(p.date)).map(normalizePlan);
   } catch {
@@ -39,7 +40,7 @@ export const loadPlans = () => {
 // Returns false if the phone storage is full
 export const savePlans = (plans) => {
   try {
-    localStorage.setItem(PLANS_KEY, JSON.stringify(plans));
+    appStorage.setItem(PLANS_KEY, JSON.stringify(plans));
     return true;
   } catch {
     return false;

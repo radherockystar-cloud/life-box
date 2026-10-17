@@ -13,6 +13,7 @@ import {
   getStats,
   loadGoals,
 } from '../utils/goalHelpers';
+import { appStorage } from '../utils/appStorage';
 
 /* =====================================================================
    PART 1  –  GoalsAppScreen.jsx  (purani GoalsAppScreen.jsx ko replace karo)
@@ -25,138 +26,106 @@ const emptyForm = () => ({ title: '', actionTime: '06:35', alertTime: '06:00', s
 
 /* ---------------------------- screen ---------------------------- */
 
-/* ---------------------------- 3D glowing theme: Pink + Purple + White (CSS) ---------------------------- */
+/* ---------------------------- pink-white glossy glow theme, Notes jaisa (CSS) ---------------------------- */
+
+// Har card ko halka alag pastel rang (Notes jaisa)
+const TINTS = [
+  'linear-gradient(160deg,#ffffff 0%,#ffeaf3 100%)',
+  'linear-gradient(160deg,#ffffff 0%,#fff0e6 100%)',
+  'linear-gradient(160deg,#ffffff 0%,#f5ecff 100%)',
+  'linear-gradient(160deg,#ffffff 0%,#e9f9f0 100%)',
+  'linear-gradient(160deg,#ffffff 0%,#e8f3ff 100%)',
+];
 
 const THEME_CSS = `
-/* ====== Life Box Goals : 3D glowing theme  |  Pink + Purple + White ======
-   Rang badalne ho to sirf yeh CSS badlo. Class naam "gx-" se shuru hote hain. */
-.gx-bg{
-  background:
-    radial-gradient(90% 40% at 10% 0%,rgba(255,255,255,.24) 0%,transparent 60%),
-    radial-gradient(80% 45% at 100% 30%,rgba(255,95,184,.40) 0%,transparent 62%),
-    radial-gradient(90% 50% at 0% 72%,rgba(124,58,237,.55) 0%,transparent 65%),
-    linear-gradient(172deg,#3b1db8 0%,#6a27d6 30%,#a321b5 62%,#e04a86 88%,#f4975f 100%);}
-.gx-root{position:relative;min-height:100vh;overflow:hidden;border-radius:28px;padding:16px 16px 112px;color:#fff;}
-.gx-orb{position:absolute;border-radius:9999px;filter:blur(50px);pointer-events:none;animation:gx-float 9s ease-in-out infinite;}
-.gx-orb-a{top:-60px;right:-40px;width:230px;height:230px;background:rgba(255,95,184,.45);}
-.gx-orb-b{top:330px;left:-80px;width:250px;height:250px;background:rgba(255,255,255,.20);animation-delay:-4s;}
-.gx-title{font-weight:800;letter-spacing:-.02em;text-shadow:0 0 20px rgba(255,255,255,.45),0 2px 0 rgba(40,0,90,.35);}
-.gx-muted{color:#e0d3ff;}
+/* ====== pink-white glossy glow theme (Notes / Memories jaisa) ======
+   Rang badalne ho to sirf yeh CSS badlo. Koi blur ya bhaari animation nahi, taaki phone halka rahe. */
+.gx-root{position:relative;min-height:100vh;padding-bottom:112px;color:#3b0f24;
+  --g-bg:linear-gradient(160deg,#ffffff 0%,rgba(255,255,255,.82) 55%,rgba(255,234,243,.96) 100%);
+  --g-bd:rgba(251,113,133,.25);
+  --g-sh:inset 0 2px 0 #fff,inset 0 -9px 14px -10px rgba(244,63,94,.25),0 10px 22px -10px rgba(244,63,94,.35),0 0 22px -8px rgba(251,113,133,.35);
+  --r-bg:linear-gradient(160deg,#fb7185 0%,#e11d48 55%,#be123c 100%);
+  --r-sh:inset 0 1.5px 0 rgba(255,255,255,.65),inset 0 -6px 12px -6px rgba(80,0,40,.5),0 8px 18px -4px rgba(225,29,72,.65),0 0 24px rgba(244,63,94,.5);
+  --y-bg:linear-gradient(160deg,#fde68a 0%,#fbbf24 55%,#d97706 100%);
+  --y-sh:inset 0 1.5px 0 rgba(255,255,255,.7),inset 0 -6px 12px -6px rgba(120,53,15,.45),0 8px 18px -4px rgba(245,158,11,.6),0 0 24px rgba(251,191,36,.5);
+  --gold-bd:rgba(251,191,36,.75);
+  --gold-sh:inset 0 2px 0 #fffbe6,inset 0 -9px 14px -10px rgba(245,158,11,.35),0 10px 22px -10px rgba(245,158,11,.5),0 0 26px -4px rgba(251,191,36,.6);}
+.gx-bg{background:radial-gradient(90% 40% at 0% 0%,rgba(251,113,133,.28),transparent 60%),radial-gradient(80% 40% at 100% 100%,rgba(244,114,182,.28),transparent 62%),linear-gradient(180deg,#fff8fb,#ffeaf3);}
+.gx-title{font-weight:900;color:#3b0f24;text-shadow:0 0 16px rgba(251,113,133,.4);}
+.gx-muted{color:#a8466c;}
 
-.gx-icon{display:flex;align-items:center;justify-content:center;flex-shrink:0;height:42px;width:42px;border-radius:15px;color:#fff;
-  background:linear-gradient(160deg,rgba(255,255,255,.40),rgba(255,255,255,.10));border:1px solid rgba(255,255,255,.42);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -4px 8px rgba(60,10,120,.28),0 8px 18px -6px rgba(30,5,80,.6),0 0 18px rgba(255,255,255,.22);
-  transition:transform .12s ease,box-shadow .12s ease;}
-.gx-icon:active{transform:translateY(2px) scale(.96);}
-.gx-icon:disabled{opacity:.3;}
+.gx-icon{display:flex;align-items:center;justify-content:center;flex-shrink:0;height:44px;width:44px;border-radius:16px;color:#e11d48;
+  background:var(--g-bg);border:1px solid var(--g-bd);border-top:1px solid #fff;box-shadow:var(--g-sh);transition:transform .12s ease;}
+.gx-icon:active{transform:scale(.94);}
+.gx-icon:disabled{opacity:.35;}
 .gx-icon-sm{height:36px;width:36px;border-radius:13px;}
-.gx-icon-rose{color:#ffe0ec;background:linear-gradient(160deg,rgba(255,110,170,.55),rgba(255,110,170,.14));border-color:rgba(255,170,205,.6);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.6),inset 0 -4px 8px rgba(120,10,70,.3),0 8px 18px -6px rgba(30,5,80,.6),0 0 20px rgba(255,70,140,.5);}
+.gx-icon-rose{background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.35);box-shadow:none;color:#e11d48;}
+.gx-badge{display:flex;align-items:center;justify-content:center;flex-shrink:0;height:44px;width:44px;border-radius:16px;
+  background:var(--g-bg);border:1px solid var(--g-bd);border-top:1px solid #fff;box-shadow:var(--g-sh);}
+.gx-twinkle{color:#f43f5e;filter:drop-shadow(0 0 8px rgba(244,63,94,.8));animation:gx-twinkle 2.2s ease-in-out infinite;}
 
-.gx-badge{display:flex;align-items:center;justify-content:center;height:42px;width:42px;border-radius:15px;color:#6d28d9;
-  background:linear-gradient(180deg,#fff,#f4eaff 55%,#d9c4ff);
-  box-shadow:inset 0 1px 0 #fff,0 4px 0 #a98ae0,0 0 28px rgba(255,255,255,.55),0 0 22px rgba(255,95,184,.45);}
+.gx-primary{color:#fff;font-weight:900;border-radius:16px;background:var(--r-bg);border:1px solid rgba(255,255,255,.5);border-top:1px solid rgba(255,255,255,.85);
+  box-shadow:var(--r-sh);transition:transform .12s ease;}
+.gx-primary:active{transform:scale(.96);}
+.gx-gold{color:#5a2d00;font-weight:900;border-radius:16px;background:var(--y-bg);border:1px solid rgba(255,255,255,.6);border-top:1px solid #fff7d6;
+  box-shadow:var(--y-sh);transition:transform .12s ease;}
+.gx-gold:active{transform:scale(.96);}
+.gx-ghost{color:#a8264f;font-weight:800;border-radius:16px;background:var(--g-bg);border:1px solid var(--g-bd);border-top:1px solid #fff;box-shadow:var(--g-sh);transition:transform .12s ease;}
+.gx-ghost:active{transform:scale(.96);}
+.gx-fab{display:flex;align-items:center;justify-content:center;height:60px;width:60px;border-radius:22px;color:#fff;background:var(--r-bg);
+  border:1px solid rgba(255,255,255,.5);border-top:1px solid rgba(255,255,255,.85);box-shadow:var(--r-sh);transition:transform .12s ease;}
+.gx-fab:active{transform:scale(.93);}
 
-.gx-white{color:#4c1d95;font-weight:800;border-radius:16px;
-  background:linear-gradient(180deg,#ffffff 0%,#f6edff 50%,#dcc8ff 100%);
-  box-shadow:inset 0 1px 0 #fff,inset 0 -3px 0 rgba(124,58,237,.25),0 5px 0 #a98ae0,0 14px 26px -6px rgba(255,255,255,.4),0 10px 30px -6px rgba(255,95,184,.5);
-  transition:transform .12s ease,box-shadow .12s ease;}
-.gx-white:active{transform:translateY(4px);
-  box-shadow:inset 0 1px 0 #fff,inset 0 -2px 0 rgba(124,58,237,.25),0 1px 0 #a98ae0,0 6px 14px -6px rgba(255,95,184,.5);}
-.gx-white-sm{border-radius:14px;box-shadow:inset 0 1px 0 #fff,inset 0 -2px 0 rgba(124,58,237,.25),0 3px 0 #a98ae0,0 10px 20px -6px rgba(255,95,184,.5);}
-.gx-white-sm:active{transform:translateY(2px);box-shadow:inset 0 1px 0 #fff,0 1px 0 #a98ae0,0 4px 10px -6px rgba(255,95,184,.5);}
-.gx-rosebtn{color:#fff;font-weight:800;border-radius:16px;
-  background:linear-gradient(180deg,#ff9cc4 0%,#f9468c 52%,#d0206a 100%);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -3px 0 rgba(120,10,50,.35),0 5px 0 #8f1448,0 14px 24px -6px rgba(255,70,140,.55);
-  transition:transform .12s ease,box-shadow .12s ease;}
-.gx-rosebtn:active{transform:translateY(4px);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 1px 0 #8f1448,0 6px 14px -6px rgba(255,70,140,.55);}
-.gx-ghost{color:#fff;font-weight:700;border-radius:16px;background:linear-gradient(160deg,rgba(255,255,255,.30),rgba(255,255,255,.08));
-  border:1px solid rgba(255,255,255,.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 6px 14px -6px rgba(30,5,80,.6);transition:transform .12s ease;}
-.gx-ghost:active{transform:translateY(2px);}
+.gx-input{border-radius:20px;color:#3b0f24;color-scheme:light;background:var(--g-bg);border:1px solid var(--g-bd);border-top:1px solid #fff;box-shadow:var(--g-sh);
+  transition:border-color .2s ease,box-shadow .2s ease;}
+.gx-input:focus,.gx-input:focus-within{border-color:rgba(244,63,94,.85);box-shadow:0 0 0 3px rgba(244,63,94,.15),0 0 22px rgba(244,63,94,.25);}
+.gx-input::placeholder{color:rgba(190,24,93,.4);}
 
-.gx-fab{position:relative;display:flex;align-items:center;justify-content:center;height:60px;width:60px;border-radius:9999px;color:#6d28d9;
-  background:linear-gradient(180deg,#ffffff,#f6edff 50%,#dcc8ff);
-  box-shadow:inset 0 2px 0 #fff,inset 0 -4px 0 rgba(124,58,237,.25),0 6px 0 #a98ae0,0 18px 32px -6px rgba(255,95,184,.6);
-  transition:transform .12s ease,box-shadow .12s ease;}
-.gx-fab:active{transform:translateY(5px);box-shadow:inset 0 2px 0 #fff,0 1px 0 #a98ae0,0 6px 14px -6px rgba(255,95,184,.6);}
-.gx-fab::after{content:'';position:absolute;inset:-8px;border-radius:9999px;z-index:-1;
-  background:radial-gradient(circle,rgba(255,255,255,.65),rgba(255,95,184,.35) 45%,transparent 72%);animation:gx-halo 2.4s ease-in-out infinite;}
+.gx-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.gx-tab{padding:10px 0;border-radius:16px;font-size:13px;font-weight:900;color:#a8264f;background:var(--g-bg);border:1px solid var(--g-bd);border-top:1px solid #fff;box-shadow:var(--g-sh);transition:transform .12s ease;}
+.gx-tab:active{transform:scale(.97);}
+.gx-tab-on{color:#fff;background:var(--r-bg);border:1px solid rgba(255,255,255,.5);border-top:1px solid rgba(255,255,255,.85);box-shadow:var(--r-sh);}
 
-.gx-input{border-radius:18px;color:#fff;color-scheme:dark;background:rgba(40,10,90,.38);border:1px solid rgba(255,255,255,.28);
-  box-shadow:inset 0 3px 8px rgba(30,5,70,.5),0 1px 0 rgba(255,255,255,.18);transition:border-color .2s ease,box-shadow .2s ease;}
-.gx-input:focus,.gx-input:focus-within{border-color:#fff;
-  box-shadow:inset 0 3px 8px rgba(30,5,70,.5),0 0 0 3px rgba(255,255,255,.2),0 0 26px rgba(255,95,184,.6);}
-.gx-input::placeholder{color:#bba8e8;}
+.gx-card{position:relative;border-radius:24px;background:var(--g-bg);border:1px solid var(--g-bd);border-top:1px solid #fff;box-shadow:var(--g-sh);transition:transform .12s ease;}
+.gx-card:active{transform:scale(.985);}
+.gx-card-glow{border:1px solid var(--gold-bd);border-top:1px solid #fff7d6;box-shadow:var(--gold-sh);}
+.gx-hero{border-radius:28px;}
+.gx-modal{border-radius:28px;background:linear-gradient(160deg,#ffffff 0%,#fff3f8 100%);}
 
-.gx-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px;border-radius:22px;background:rgba(40,10,90,.38);
-  border:1px solid rgba(255,255,255,.22);box-shadow:inset 0 4px 10px rgba(30,5,70,.5),0 1px 0 rgba(255,255,255,.15);}
-.gx-tab{padding:11px 0;border-radius:16px;font-size:14px;font-weight:700;color:#e0d3ff;transition:all .2s ease;}
-.gx-tab-on{color:#4c1d95;background:linear-gradient(180deg,#fff,#f6edff 55%,#dcc8ff);
-  box-shadow:inset 0 1px 0 #fff,0 4px 0 #a98ae0,0 10px 24px -4px rgba(255,95,184,.55);transform:translateY(-1px);}
+.gx-pill{white-space:nowrap;border-radius:9999px;padding:3px 10px;font-size:10px;font-weight:800;color:#be123c;
+  background:rgba(244,63,94,.1);border:1px solid rgba(251,113,133,.35);}
+.gx-chip{display:flex;align-items:center;gap:6px;border-radius:13px;padding:7px 10px;font-size:11px;font-weight:800;}
+.gx-chip-glow{color:#92400e;background:linear-gradient(160deg,#fffbe6,#fff0b8);border:1px solid var(--gold-bd);box-shadow:0 0 16px -4px rgba(251,191,36,.6);}
+.gx-chip-warn{color:#be123c;background:rgba(244,63,94,.12);border:1px solid rgba(225,29,72,.55);box-shadow:0 0 14px -4px rgba(244,63,94,.5);animation:gx-blink 2s ease-in-out infinite;}
+.gx-chip-mute{color:#a8466c;background:rgba(244,63,94,.07);border:1px solid rgba(251,113,133,.2);}
 
-.gx-card{position:relative;border-radius:26px;border:1px solid rgba(255,255,255,.36);
-  background:linear-gradient(145deg,rgba(255,255,255,.30) 0%,rgba(255,255,255,.10) 45%,rgba(255,255,255,.18) 100%);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 -14px 28px rgba(60,10,120,.28),0 22px 44px -14px rgba(30,5,80,.65),0 10px 36px -8px rgba(255,95,184,.4);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:transform .18s ease;}
-.gx-card::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
-  background:linear-gradient(160deg,rgba(255,255,255,.34) 0%,rgba(255,255,255,0) 38%);}
-.gx-card>*{position:relative;z-index:1;}
-.gx-card:active{transform:translateY(2px) scale(.985);}
-.gx-card-glow{border-color:rgba(255,255,255,.75);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.8),inset 0 -14px 28px rgba(60,10,120,.25),0 22px 44px -14px rgba(30,5,80,.65),0 0 36px rgba(255,255,255,.4),0 10px 40px -6px rgba(255,95,184,.55);}
-.gx-hero{border-radius:30px;}
-.gx-modal{border-radius:28px;background:linear-gradient(150deg,rgba(88,36,170,.97),rgba(44,12,96,.98));}
+.gx-track{height:8px;border-radius:9999px;overflow:hidden;background:rgba(251,113,133,.2);box-shadow:inset 0 2px 4px rgba(190,24,93,.18);}
+.gx-fill{position:relative;height:100%;border-radius:9999px;transition:width .7s ease;background:linear-gradient(90deg,#fb7185,#e11d48);box-shadow:0 0 10px rgba(244,63,94,.5);}
+.gx-fill::after{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.45),rgba(255,255,255,0) 60%);}
 
-.gx-pill{white-space:nowrap;border-radius:9999px;padding:3px 10px;font-size:10px;font-weight:700;color:#fff;
-  background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.42);box-shadow:0 0 14px rgba(255,255,255,.25);}
-.gx-chip{display:flex;align-items:center;gap:6px;border-radius:13px;padding:7px 10px;font-size:11px;font-weight:700;}
-.gx-chip-glow{color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.36),rgba(255,255,255,.12));
-  border:1px solid rgba(255,255,255,.55);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 0 18px rgba(255,255,255,.32);}
-.gx-chip-warn{color:#fff;background:linear-gradient(180deg,rgba(255,140,100,.6),rgba(255,95,110,.28));
-  border:1px solid rgba(255,175,135,.75);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 0 18px rgba(255,140,100,.5);animation:gx-blink 2s ease-in-out infinite;}
-.gx-chip-mute{color:#eadcff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);}
+.gx-mini{display:flex;align-items:center;justify-content:center;height:30px;width:30px;border-radius:10px;color:#e11d48;background:rgba(244,63,94,.1);transition:transform .12s ease;}
+.gx-mini:active{transform:scale(.9);}
+.gx-mini-glow{color:#b45309;background:rgba(251,191,36,.22);box-shadow:0 0 12px -2px rgba(251,191,36,.7);}
 
-.gx-track{height:8px;border-radius:9999px;overflow:hidden;background:rgba(40,10,90,.45);box-shadow:inset 0 2px 4px rgba(30,5,70,.6);}
-.gx-fill{position:relative;height:100%;border-radius:9999px;transition:width .7s ease;
-  background:linear-gradient(90deg,#ff5fb8,#ffb3e0 55%,#ffffff);box-shadow:0 0 14px rgba(255,95,184,.8);}
-.gx-fill::after{content:'';position:absolute;inset:0;border-radius:inherit;
-  background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.7) 50%,transparent 70%);background-size:200% 100%;animation:gx-shimmer 2.4s linear infinite;}
+.gx-tile{border-radius:18px;padding:12px 0;text-align:center;background:rgba(255,255,255,.7);border:1px solid rgba(251,113,133,.2);box-shadow:inset 0 2px 6px rgba(244,63,94,.1);}
+.gx-num{font-weight:900;color:#3b0f24;font-variant-numeric:tabular-nums;}
+.gx-quote{border-radius:14px;padding:12px;background:rgba(255,255,255,.65);border:1px solid rgba(251,113,133,.15);color:#6f2f4b;}
 
-.gx-mini{display:flex;align-items:center;justify-content:center;height:30px;width:30px;border-radius:11px;color:#f1e8ff;
-  background:linear-gradient(160deg,rgba(255,255,255,.34),rgba(255,255,255,.08));border:1px solid rgba(255,255,255,.34);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 4px 10px -4px rgba(30,5,80,.6);transition:transform .12s ease;}
-.gx-mini:active{transform:translateY(2px) scale(.92);}
-.gx-mini-glow{color:#fff;border-color:rgba(255,255,255,.7);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 0 16px rgba(255,255,255,.55);}
-
-.gx-tile{border-radius:18px;padding:12px 0;text-align:center;background:rgba(40,10,90,.38);border:1px solid rgba(255,255,255,.18);
-  box-shadow:inset 0 3px 8px rgba(30,5,70,.5),0 1px 0 rgba(255,255,255,.16);}
-.gx-num{font-weight:800;font-variant-numeric:tabular-nums;text-shadow:0 0 16px rgba(255,255,255,.65);}
-.gx-quote{border-radius:14px;padding:12px;background:rgba(40,10,90,.38);box-shadow:inset 0 3px 8px rgba(30,5,70,.45);}
-
-.gx-day{position:relative;border-radius:22px;padding:16px;border:1px solid rgba(255,255,255,.26);
-  background:linear-gradient(150deg,rgba(255,255,255,.20),rgba(255,255,255,.06));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -8px 18px rgba(60,10,120,.22),0 12px 26px -12px rgba(30,5,80,.7);}
-.gx-day-done{border-color:rgba(255,255,255,.8);background:linear-gradient(150deg,rgba(255,255,255,.38),rgba(255,255,255,.14));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -8px 18px rgba(60,10,120,.2),0 0 28px rgba(255,255,255,.35),0 12px 26px -12px rgba(30,5,80,.7);}
-.gx-day-missed{border-color:rgba(255,175,135,.75);background:linear-gradient(150deg,rgba(255,140,100,.38),rgba(255,95,110,.14));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -8px 18px rgba(120,20,60,.2),0 0 26px rgba(255,140,100,.35),0 12px 26px -12px rgba(30,5,80,.7);}
-.gx-day-open{border-color:rgba(255,255,255,.95);background:linear-gradient(150deg,rgba(255,95,184,.55),rgba(255,95,184,.18));animation:gx-open 2.2s ease-in-out infinite;}
+.gx-day{position:relative;border-radius:22px;padding:16px;background:var(--g-bg);border:1px solid var(--g-bd);border-top:1px solid #fff;box-shadow:var(--g-sh);}
+.gx-day-done{background:linear-gradient(160deg,#ffffff 0%,#e9f9f0 100%);border:1px solid rgba(16,185,129,.4);border-top:1px solid #fff;
+  box-shadow:inset 0 2px 0 #fff,inset 0 -9px 14px -10px rgba(16,185,129,.25),0 10px 22px -10px rgba(16,185,129,.35);}
+.gx-day-missed{background:linear-gradient(160deg,#ffffff 0%,#ffe4ea 100%);border:1px solid rgba(225,29,72,.5);border-top:1px solid #fff;
+  box-shadow:inset 0 2px 0 #fff,inset 0 -9px 14px -10px rgba(225,29,72,.3),0 10px 22px -10px rgba(225,29,72,.4);}
+.gx-day-open{background:linear-gradient(160deg,#fffdf2 0%,#fff0e6 100%);border:1px solid var(--gold-bd);border-top:1px solid #fff7d6;box-shadow:var(--gold-sh);}
 .gx-day-skip{opacity:.7;}
 
-.gx-toast{border-radius:18px;padding:12px 16px;text-align:center;font-size:12px;font-weight:600;color:#fff;
-  background:linear-gradient(150deg,rgba(88,36,170,.97),rgba(44,12,96,.98));border:1px solid rgba(255,255,255,.45);
-  box-shadow:0 0 26px rgba(255,95,184,.5),0 14px 30px -10px rgba(30,5,80,.7);}
+.gx-toast{border-radius:14px;padding:10px 18px;text-align:center;font-size:13px;font-weight:800;color:#fff;background:rgba(60,10,30,.92);}
 
-.gx-rise{animation:gx-rise .55s cubic-bezier(.2,.8,.2,1) both;}
-@keyframes gx-rise{from{opacity:0;transform:translateY(16px) scale(.97);}to{opacity:1;transform:none;}}
-@keyframes gx-float{0%,100%{transform:translate(0,0);}50%{transform:translate(18px,-24px);}}
-@keyframes gx-halo{0%,100%{opacity:.55;transform:scale(.94);}50%{opacity:1;transform:scale(1.08);}}
-@keyframes gx-shimmer{from{background-position:200% 0;}to{background-position:-200% 0;}}
-@keyframes gx-blink{0%,100%{opacity:1;}50%{opacity:.75;}}
-@keyframes gx-open{
-  0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 0 24px rgba(255,95,184,.5),0 12px 26px -12px rgba(30,5,80,.7);}
-  50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 0 46px rgba(255,95,184,.9),0 12px 26px -12px rgba(30,5,80,.7);}}
-@media (prefers-reduced-motion:reduce){.gx-root *,.gx-root *::after{animation:none !important;}}
+.gx-rise{animation:gx-rise .3s ease-out;}
+@keyframes gx-rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+@keyframes gx-twinkle{0%,100%{opacity:.7;transform:scale(1) rotate(0);}50%{opacity:1;transform:scale(1.2) rotate(12deg);}}
+@keyframes gx-blink{0%,100%{opacity:1;}50%{opacity:.7;}}
+@media (prefers-reduced-motion:reduce){.gx-root *{animation:none !important;}}
 `;
 
 export default function GoalsAppScreen({ onBack }) {
@@ -182,12 +151,13 @@ export default function GoalsAppScreen({ onBack }) {
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(''), 2600);
   };
+
   // goals ko vault me save karo, aur notifications dobara set karwao
   useEffect(() => {
     let vault = [];
-    try { vault = JSON.parse(localStorage.getItem('newlife_vault') || '[]'); } catch (e) { vault = []; }
+    try { vault = JSON.parse(appStorage.getItem('newlife_vault') || '[]'); } catch (e) { vault = []; }
     const others = vault.filter((i) => !(i && i.type === 'Goal'));
-    localStorage.setItem('newlife_vault', JSON.stringify([...goals, ...others]));
+    appStorage.setItem('newlife_vault', JSON.stringify([...goals, ...others]));
     requestSync(800);
   }, [goals]);
 
@@ -302,37 +272,35 @@ export default function GoalsAppScreen({ onBack }) {
   /* ------------------------- render ------------------------- */
 
   return (
-    <div className="gx-root gx-bg">
+    <div className="gx-root">
       <style>{THEME_CSS}</style>
-      <div className="gx-orb gx-orb-a" />
-      <div className="gx-orb gx-orb-b" />
 
-      <div className="relative z-10 space-y-5">
+      <div className="space-y-4">
         {/* header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-3">
             <button onClick={onBack} aria-label="Back" className="gx-icon">
-              <ArrowLeft size={18} />
+              <ArrowLeft size={20} />
             </button>
             <div>
-              <h2 className="gx-title text-[24px] leading-tight">Life Box Goals</h2>
-              <p className="gx-muted text-xs">Small days, built into big streaks</p>
+              <h2 className="gx-title text-[21px]">Life Box Goals</h2>
+              <p className="gx-muted mt-0.5 text-[11.5px] font-bold">Small days, built into big streaks</p>
             </div>
           </div>
           <div className="gx-badge">
-            <Target size={20} />
+            <Target size={20} className="gx-twinkle" />
           </div>
         </div>
 
         {/* search */}
-        <div className="gx-input flex items-center gap-2.5 px-4 py-3.5">
-          <Search size={18} className="text-[#ffd9f1]" />
+        <div className="gx-input flex h-[50px] items-center gap-2.5 px-4">
+          <Search size={18} className="shrink-0 text-[#f43f5e]" />
           <input
             type="text"
             placeholder="Search goals..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent text-sm text-[#ffffff] outline-none placeholder:text-[#bba8e8]"
+            className="w-full bg-transparent text-[13px] font-bold text-[#3b0f24] outline-none placeholder:text-[rgba(190,24,93,0.4)]"
           />
         </div>
 
@@ -354,24 +322,28 @@ export default function GoalsAppScreen({ onBack }) {
 
         {/* goals */}
         {filtered.length === 0 ? (
-          <div className="gx-muted py-16 text-center text-sm leading-relaxed">
-            {tab === 'active'
-              ? goals.length === 0
-                ? 'No goals yet. Tap + and start your first streak.'
-                : 'No active goals match your search.'
-              : 'Finished goals will show up here.'}
+          <div className="gx-card px-5 py-11 text-center">
+            <div className="text-[44px]">{tab === 'active' ? '🎯' : '🏆'}</div>
+            <div className="gx-muted mt-2 text-sm font-bold leading-relaxed">
+              {tab === 'active'
+                ? goals.length === 0
+                  ? 'No goals yet. Tap + and start your first streak.'
+                  : 'No active goals match your search.'
+                : 'Finished goals will show up here.'}
+            </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3.5">
-            {filtered.map((item, idx) => {
+          <div className="grid grid-cols-2 gap-3">
+            {filtered.map((item) => {
               const stats = getStats(item);
               const missed = getMissedDays(item).length;
               const sd = parseDate(item.startDate);
+              const tint = TINTS[Math.abs(Number(item.id) || 0) % TINTS.length];
               return (
                 <div
                   key={item.id}
                   onClick={() => setActiveId(item.id)}
-                  style={{ animationDelay: `${Math.min(idx, 8) * 70}ms` }}
+                  style={{ background: tint }}
                   className={`gx-card gx-rise flex min-h-[184px] cursor-pointer flex-col justify-between p-4 ${
                     item.completed ? 'gx-card-glow' : ''
                   }`}
@@ -381,11 +353,11 @@ export default function GoalsAppScreen({ onBack }) {
                       <span className="gx-pill">
                         {MONTH_NAMES[sd.getMonth()].slice(0, 3)} {sd.getFullYear()}
                       </span>
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-[#e8dcff]">
+                      <span className="flex items-center gap-1 text-[11px] font-bold text-[#a8466c]">
                         <Clock size={11} /> {item.actionTime}
                       </span>
                     </div>
-                    <h4 className="mt-3 line-clamp-2 text-[15px] font-extrabold leading-snug">{item.title}</h4>
+                    <h4 className="mt-3 line-clamp-2 text-[15px] font-black leading-snug text-[#be123c]">{item.title}</h4>
                   </div>
 
                   <div className="mt-3 space-y-2.5">
@@ -411,8 +383,8 @@ export default function GoalsAppScreen({ onBack }) {
                       <div className="gx-fill" style={{ width: `${stats.pct}%` }} />
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-[#ffd9f1]">
+                    <div className="flex items-center justify-between border-t border-[rgba(251,113,133,0.2)] pt-2">
+                      <span className="text-[11px] font-extrabold text-[#a8264f]">
                         Done: {stats.done}/{stats.elapsed}
                       </span>
                       <div className="flex items-center gap-1.5">
@@ -449,7 +421,7 @@ export default function GoalsAppScreen({ onBack }) {
           aria-label="New goal"
           className="gx-fab"
         >
-          <Plus size={28} className="stroke-[3]" />
+          <Plus size={28} strokeWidth={3} />
         </button>
       </div>
 
@@ -466,68 +438,68 @@ export default function GoalsAppScreen({ onBack }) {
 
       {/* new goal form */}
       {isEditing && (
-        <div className="gx-bg fixed inset-0 z-50 overflow-y-auto text-[#ffffff]">
-          <div className="mx-auto max-w-md px-5 pb-16 pt-5">
-            <div className="mb-6 flex items-center justify-between">
+        <div className="gx-bg fixed inset-0 z-[60] overflow-y-auto text-[#3b0f24]">
+          <div className="mx-auto max-w-md px-[18px] pb-16 pt-[18px]">
+            <div className="mb-5 flex items-center justify-between gap-2">
               <button onClick={() => setIsEditing(false)} aria-label="Back" className="gx-icon">
-                <ArrowLeft size={18} />
+                <ArrowLeft size={20} />
               </button>
-              <h3 className="gx-title text-base">New goal</h3>
+              <h3 className="gx-title flex-1 text-center text-[15px]">New goal</h3>
               <button
                 onClick={handleSave}
-                className="gx-white gx-white-sm flex h-10 items-center gap-1.5 px-4 text-xs"
+                className="gx-primary flex h-11 items-center gap-1.5 px-[18px] text-[13px]"
               >
-                <Save size={14} /> Save
+                <Save size={16} /> Save
               </button>
             </div>
 
             <div className="space-y-5">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-[#ffd9f1]">What do you want to do every day?</label>
+                <label className="text-xs font-extrabold text-[#a8264f]">What do you want to do every day?</label>
                 <input
                   type="text"
                   placeholder="e.g. Gym at 6:35 AM"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="gx-input w-full p-3.5 text-sm outline-none"
+                  className="gx-input w-full px-[18px] py-[15px] text-base font-black outline-none"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-[#ffd9f1]">Unlock time</label>
+                <label className="text-xs font-extrabold text-[#a8264f]">Unlock time</label>
                 <input
                   type="time"
                   value={form.actionTime}
                   onChange={(e) => setForm({ ...form, actionTime: e.target.value })}
-                  className="gx-input w-full p-3.5 text-sm outline-none"
+                  className="gx-input w-full p-3.5 text-sm font-bold outline-none"
                 />
-                <p className="gx-muted text-[11px]">Your daily log opens at this time, not a minute earlier.</p>
+                <p className="gx-muted text-[11px] font-semibold">Your daily log opens at this time, not a minute earlier.</p>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-[#ffd9f1]">Prep reminder</label>
+                <label className="text-xs font-extrabold text-[#a8264f]">Prep reminder</label>
                 <input
                   type="time"
                   value={form.alertTime}
                   onChange={(e) => setForm({ ...form, alertTime: e.target.value })}
-                  className="gx-input w-full p-3.5 text-sm outline-none"
+                  className="gx-input w-full p-3.5 text-sm font-bold outline-none"
                 />
-                <p className="gx-muted text-[11px]">A phone notification to get you ready. Must be earlier than the unlock time.</p>
+                <p className="gx-muted text-[11px] font-semibold">A phone notification to get you ready. Must be earlier than the unlock time.</p>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-[#ffd9f1]">Start date</label>
+                <label className="text-xs font-extrabold text-[#a8264f]">Start date</label>
                 <input
                   type="date"
                   min={toDateStr()}
                   value={form.startDate}
                   onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                  className="gx-input w-full p-3.5 text-sm outline-none"
+                  className="gx-input w-full p-3.5 text-sm font-bold outline-none"
                 />
-                <p className="gx-muted text-[11px]">The goal keeps running month after month until you finish it.</p>
+                <p className="gx-muted text-[11px] font-semibold">The goal keeps running month after month until you finish it.</p>
               </div>
 
-              <div className="gx-card gx-card-glow p-4 text-xs leading-relaxed text-[#fbe9ff]">
+              <div className="gx-card gx-card-glow p-4 text-xs font-semibold leading-relaxed text-[#6f2f4b]">
                 You will get a prep reminder at {form.alertTime || '--:--'}, the log unlocks at {form.actionTime || '--:--'}, and if you skip a day you will get a missed alert at 11:55 PM.
               </div>
             </div>
@@ -538,7 +510,7 @@ export default function GoalsAppScreen({ onBack }) {
       {/* confirm popup */}
       {confirm && (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-[#1a0b3d]/70 p-6 backdrop-blur-sm"
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-[#3c0a1e]/45 p-6"
           onClick={() => setConfirm(null)}
         >
           <div className="gx-card gx-modal w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
@@ -553,7 +525,7 @@ export default function GoalsAppScreen({ onBack }) {
             <h4 className="gx-title text-lg">
               {confirm.type === 'complete' ? 'Finish this goal?' : 'Delete this goal?'}
             </h4>
-            <p className="gx-muted mt-1.5 text-sm leading-relaxed">
+            <p className="gx-muted mt-1.5 text-sm font-semibold leading-relaxed">
               {confirm.type === 'complete'
                 ? 'Daily unlock, missed banners and reminders will stop. Your history stays saved under Completed.'
                 : 'It moves to your Bin. Daily unlock and reminders will stop.'}
@@ -564,7 +536,7 @@ export default function GoalsAppScreen({ onBack }) {
               </button>
               <button
                 onClick={runConfirm}
-                className={`py-3 text-sm ${confirm.type === 'complete' ? 'gx-white' : 'gx-rosebtn'}`}
+                className={`py-3 text-sm ${confirm.type === 'complete' ? 'gx-gold' : 'gx-primary'}`}
               >
                 {confirm.type === 'complete' ? 'Finish' : 'Delete'}
               </button>

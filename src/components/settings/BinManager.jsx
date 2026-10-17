@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Trash2, RotateCcw } from 'lucide-react';
 import { BIN_KEY } from '../../utils/binStorage';
+import { deleteItemMedia } from '../../utils/mediaStore';
+import { appStorage } from '../../utils/appStorage';
 
 const KEEP_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -9,15 +11,17 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const loadBin = () => {
   let items = [];
   try {
-    items = JSON.parse(localStorage.getItem(BIN_KEY) || '[]');
+    items = JSON.parse(appStorage.getItem(BIN_KEY) || '[]');
     if (!Array.isArray(items)) items = [];
   } catch {
     items = [];
   }
   const now = Date.now();
-  return items
-    .map((item) => (item.deletedTs ? item : { ...item, deletedTs: now }))
-    .filter((item) => now - item.deletedTs < KEEP_DAYS * DAY_MS);
+  const stamped = items.map((item) => (item.deletedTs ? item : { ...item, deletedTs: now }));
+  return {
+    kept: stamped.filter((item) => now - item.deletedTs < KEEP_DAYS * DAY_MS),
+    expired: stamped.filter((item) => now - item.deletedTs >= KEEP_DAYS * DAY_MS),
+  };
 };
 
 const timeAgo = (ts) => {
@@ -34,7 +38,7 @@ const daysLeft = (ts) => Math.max(1, KEEP_DAYS - Math.floor((Date.now() - ts) / 
 
 const readArray = (key) => {
   try {
-    const value = JSON.parse(localStorage.getItem(key) || '[]');
+    const value = JSON.parse(appStorage.getItem(key) || '[]');
     return Array.isArray(value) ? value : [];
   } catch {
     return [];
@@ -42,11 +46,22 @@ const readArray = (key) => {
 };
 
 export default function BinManager({ currentTheme }) {
-  const [binItems, setBinItems] = useState(loadBin);
+  const expiredRef = useRef([]);
+  const [binItems, setBinItems] = useState(() => {
+    const { kept, expired } = loadBin();
+    expiredRef.current = expired;
+    return kept;
+  });
 
   useEffect(() => {
-    localStorage.setItem(BIN_KEY, JSON.stringify(binItems));
+    appStorage.setItem(BIN_KEY, JSON.stringify(binItems));
   }, [binItems]);
+
+  // 7 din purane items ki photo/voice bhi hamesha ke liye hatao
+  useEffect(() => {
+    expiredRef.current.forEach((item) => { deleteItemMedia(item); });
+    expiredRef.current = [];
+  }, []);
 
   const handleRestore = (index) => {
     const item = binItems[index];
@@ -58,11 +73,15 @@ export default function BinManager({ currentTheme }) {
 
     let restored = original;
     if (targetKey === 'lifebox_keep_notes') {
+      const { type, ...noteFields } = original; // notes ki list mein 'type' nahi hota
+      const d = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
       restored = {
+        ...noteFields,
         id: original.id || Date.now(),
         title: original.title,
         content: original.content || '',
-        date: original.date || new Date().toISOString().split('T')[0]
+        date: original.date || `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
       };
     }
 
@@ -70,7 +89,7 @@ export default function BinManager({ currentTheme }) {
     const alreadyThere = restored.id !== undefined && list.some((x) => x && x.id === restored.id);
     if (!alreadyThere) {
       try {
-        localStorage.setItem(targetKey, JSON.stringify([restored, ...list]));
+        appStorage.setItem(targetKey, JSON.stringify([restored, ...list]));
       } catch {
         alert('Restore nahi ho paya: phone mein jagah kam hai.');
         return;
@@ -86,6 +105,7 @@ export default function BinManager({ currentTheme }) {
 
   const handlePermanentDelete = (index) => {
     if (!window.confirm('Ye item hamesha ke liye delete ho jayega. Pakka?')) return;
+    deleteItemMedia(binItems[index]); // photo / video / voice file bhi hamesha ke liye hatao
     setBinItems(binItems.filter((_, i) => i !== index));
   };
 

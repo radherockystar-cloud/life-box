@@ -9,6 +9,7 @@ import {
   pickReplyText,
   friendlyError,
 } from '../utils/aiChatHelpers';
+import { appStorage } from '../utils/appStorage';
 
 const CHATS_KEY = 'lifebox_ai_chats'; // saari purani chats (history)
 const OLD_CHAT_KEY = 'lifebox_ai_chat'; // pehle wale version ki ek chat
@@ -17,17 +18,17 @@ const MODEL_KEY = 'lifebox_ai_model';
 // Saari chats ki list (history). Pehle wali ek chat ho to usse history mein le aata hai.
 const loadChats = () => {
   try {
-    const raw = localStorage.getItem(CHATS_KEY);
+    const raw = appStorage.getItem(CHATS_KEY);
     if (raw) {
       const list = JSON.parse(raw);
       return Array.isArray(list) ? list : [];
     }
-    const old = JSON.parse(localStorage.getItem(OLD_CHAT_KEY) || '[]');
+    const old = JSON.parse(appStorage.getItem(OLD_CHAT_KEY) || '[]');
     const firstUser = Array.isArray(old) ? old.find((m) => m.sender === 'user') : null;
     if (firstUser) {
       const migrated = [{ id: `old-${Date.now()}`, title: (firstUser.text || 'Chat').slice(0, 48), updatedAt: Date.now(), messages: old }];
-      localStorage.setItem(CHATS_KEY, JSON.stringify(migrated));
-      localStorage.removeItem(OLD_CHAT_KEY);
+      appStorage.setItem(CHATS_KEY, JSON.stringify(migrated));
+      appStorage.removeItem(OLD_CHAT_KEY);
       return migrated;
     }
   } catch (e) {
@@ -162,7 +163,7 @@ export default function AiChatAppScreen({ onBack }) {
     chatsRef.current = list;
     setChats(list);
     try {
-      localStorage.setItem(CHATS_KEY, JSON.stringify(list));
+      appStorage.setItem(CHATS_KEY, JSON.stringify(list));
     } catch (e) {
       // save na ho paye to bhi chat chalegi
     }
@@ -228,7 +229,7 @@ export default function AiChatAppScreen({ onBack }) {
     }
     let remembered = '';
     try {
-      remembered = localStorage.getItem(MODEL_KEY) || '';
+      remembered = appStorage.getItem(MODEL_KEY) || '';
     } catch (e) {
       remembered = '';
     }
@@ -249,7 +250,7 @@ export default function AiChatAppScreen({ onBack }) {
       }
       if (response.ok && !data.error) {
         try {
-          localStorage.setItem(MODEL_KEY, model);
+          appStorage.setItem(MODEL_KEY, model);
         } catch (e) {
           // ignore
         }
@@ -299,7 +300,7 @@ export default function AiChatAppScreen({ onBack }) {
       }
 
       const data = await callGemini({
-        system_instruction: { parts: [{ text: buildSystemInstruction(buildAppData(localStorage)) }] },
+        system_instruction: { parts: [{ text: buildSystemInstruction(buildAppData(appStorage)) }] },
         contents,
       });
 
@@ -327,9 +328,7 @@ export default function AiChatAppScreen({ onBack }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'linear-gradient(180deg, rgba(255,255,255,0.97), rgba(255,238,246,0.9))',
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,238,246,0.96))',
           borderBottom: '1px solid rgba(251,113,133,0.25)',
           boxShadow: '0 12px 28px -14px rgba(244,63,94,0.5)',
         }}
@@ -475,9 +474,7 @@ export default function AiChatAppScreen({ onBack }) {
           alignItems: 'center',
           gap: '10px',
           padding: '12px 12px calc(12px + env(safe-area-inset-bottom, 0px))',
-          background: 'linear-gradient(180deg, rgba(255,238,246,0.9), rgba(255,255,255,0.98))',
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
+          background: 'linear-gradient(180deg, rgba(255,238,246,0.97), rgba(255,255,255,0.99))',
           borderTop: '1px solid rgba(251,113,133,0.25)',
           boxShadow: '0 -12px 28px -14px rgba(244,63,94,0.45)',
         }}
@@ -579,7 +576,7 @@ export default function AiChatAppScreen({ onBack }) {
               })}
             </div>
           </div>
-          <div style={{ flex: 1, background: 'rgba(80,10,40,0.38)', backdropFilter: 'blur(2px)' }} onClick={() => setHistoryOpen(false)} />
+          <div style={{ flex: 1, background: 'rgba(80,10,40,0.42)' }} onClick={() => setHistoryOpen(false)} />
         </div>
       )}
     </div>

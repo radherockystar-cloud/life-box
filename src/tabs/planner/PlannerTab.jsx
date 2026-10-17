@@ -7,39 +7,86 @@ import MyPlansList from './MyPlansList';
 import { getFestivalsForDate, getFestivalsInMonth, getNextFestival, getDayEmoji, toDateStr, dateFromStr } from './festivalsData';
 import { loadPlans, savePlans, addOrUpdatePlan, deletePlan, getBannerPlans, getKind } from './plansStorage';
 import { requestSync } from './reminderService';
+import { useApp } from '../../context/AppContext';
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-const AURORA = 'linear-gradient(160deg, #4f46e5 0%, #7c3aed 38%, #db2777 75%, #f59e0b 100%)';
+// Notes jaisa pink-white glossy glow theme (koi blur nahi, taaki Planner halka rahe)
+// Rang ab theme (light/dark) ke hisaab se makeStyles(c) se aate hain.
 
-const glass = {
-  background: 'linear-gradient(145deg, rgba(255,255,255,0.28), rgba(255,255,255,0.09))',
-  border: '1px solid rgba(255,255,255,0.45)',
-  boxShadow: '0 12px 26px rgba(30,20,100,0.28), inset 0 1px 0 rgba(255,255,255,0.6)',
-  backdropFilter: 'blur(14px)',
-  WebkitBackdropFilter: 'blur(14px)',
-};
-
-const roundButton = {
-  ...glass,
-  width: '42px',
-  height: '42px',
-  borderRadius: '15px',
+const roseBtn = {
+  background: 'linear-gradient(160deg, #fb7185 0%, #e11d48 55%, #be123c 100%)',
+  border: '1px solid rgba(255,255,255,0.5)',
+  borderTop: '1px solid rgba(255,255,255,0.85)',
+  boxShadow: 'inset 0 1.5px 0 rgba(255,255,255,0.65), inset 0 -6px 12px -6px rgba(80,0,40,0.5), 0 8px 18px -4px rgba(225,29,72,0.65), 0 0 24px rgba(244,63,94,0.5)',
   color: '#ffffff',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  cursor: 'pointer',
 };
 
-const daysText = (days) => (days === 0 ? 'Today!' : days === 1 ? 'Tomorrow' : days > 1 ? `In ${days} days` : 'Passed');
+const makeStyles = (c) => {
+  const INK = c.text;
 
-const prettyShort = (dateStr) => {
-  const d = dateFromStr(dateStr);
-  return `${WEEKDAY_NAMES[d.getDay()].slice(0, 3)}, ${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`;
+  const glass = {
+    background: c.glass,
+    border: '1px solid ' + c.glassBorder,
+    borderTop: '1px solid ' + c.glassTop,
+    boxShadow: c.glassShadow + ', 0 0 22px -8px rgba(251,113,133,0.35)',
+  };
+
+  const goldGlow = c.isDark
+    ? {
+        background: 'linear-gradient(160deg, rgba(251,191,36,0.22) 0%, rgba(245,158,11,0.12) 100%)',
+        border: '1px solid rgba(251,191,36,0.6)',
+        borderTop: '1px solid rgba(251,191,36,0.6)',
+        boxShadow: '0 10px 22px -10px rgba(0,0,0,0.5), 0 0 26px -4px rgba(251,191,36,0.3)',
+      }
+    : {
+        background: 'linear-gradient(160deg, #fffbe6 0%, #fff0b8 100%)',
+        border: '1px solid rgba(251,191,36,0.75)',
+        borderTop: '1px solid #fff7d6',
+        boxShadow: 'inset 0 2px 0 #fffbe6, inset 0 -9px 14px -10px rgba(245,158,11,0.35), 0 10px 22px -10px rgba(245,158,11,0.5), 0 0 26px -4px rgba(251,191,36,0.6)',
+      };
+
+  const chipStyle = {
+    fontSize: '11px',
+    fontWeight: 900,
+    padding: '6px 11px',
+    borderRadius: '12px',
+    background: 'rgba(244,63,94,0.1)',
+    border: '1px solid rgba(251,113,133,0.35)',
+    color: c.selectedText,
+  };
+
+  const roundButton = {
+    ...glass,
+    width: '44px',
+    height: '44px',
+    borderRadius: '16px',
+    color: c.accentDeep,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+  };
+
+  return {
+    INK,
+    glass,
+    goldGlow,
+    chipStyle,
+    roundButton,
+    // text colours used inside the cards
+    textSub: c.textSub,
+    accentText: c.selectedText,
+    midText: c.choiceText,
+    dateText: c.isDark ? c.textSub : '#b0587a',
+    goldSub: c.isDark ? '#fcd34d' : '#92400e',
+  };
 };
+
+// "{n}" jaisi jagah ko asli value se badalta hai
+const fmt = (text, vars) => String(text).replace(/\{(\w+)\}/g, (_, key) => (vars[key] ?? ''));
 
 const formatTime = (time) => {
   const [h, m] = (time || '09:00').split(':').map(Number);
@@ -47,6 +94,10 @@ const formatTime = (time) => {
 };
 
 export default function PlannerTab() {
+  // Theme (c) + language (tx) poore app wale context se
+  const { c, t: tx, currentLang } = useApp();
+  const { INK, glass, goldGlow, chipStyle, roundButton, textSub, accentText, midText, dateText, goldSub } = makeStyles(c);
+
   const [, setTick] = useState(0);
   const now = new Date();
   const todayStr = toDateStr(now);
@@ -113,7 +164,7 @@ export default function PlannerTab() {
   // ---------- Plans ----------
   const commitPlans = (updated) => {
     if (!savePlans(updated)) {
-      alert('Phone storage is full, so this change could not be saved.');
+      alert(tx.planStorageFull);
       return false;
     }
     setPlans(updated);
@@ -173,26 +224,38 @@ export default function PlannerTab() {
   const selectedFestivals = selectedDate ? getFestivalsForDate(selectedDate) : [];
   const isCurrentMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth();
 
+  // ---------- Language-aware names / dates (English me bilkul pehle jaisa) ----------
+  const intlLocale = (currentLang || 'en') + '-u-nu-latn';
+  const monthName = (m) => (currentLang === 'en' ? MONTH_NAMES[m] : new Date(2026, m, 1).toLocaleDateString(intlLocale, { month: 'long' }));
+  const weekdayName = (d) => (currentLang === 'en' ? WEEKDAY_NAMES[d] : new Date(2026, 0, 4 + d).toLocaleDateString(intlLocale, { weekday: 'long' }));
+  const prettyShort = (dateStr) => {
+    const d = dateFromStr(dateStr);
+    if (currentLang === 'en') return `${WEEKDAY_NAMES[d.getDay()].slice(0, 3)}, ${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`;
+    return d.toLocaleDateString(intlLocale, { weekday: 'short', day: 'numeric', month: 'short' });
+  };
+  const festName = (item) => item?.names?.[currentLang] || item?.names?.en || '';
+  const daysText = (days) => (days === 0 ? tx.planTodayBang : days === 1 ? tx.planTomorrow : days > 1 ? fmt(tx.planInDays, { n: days }) : tx.planPassed);
+
   return (
     <div className="pb-28">
-      <div style={{ position: 'relative', borderRadius: '34px', overflow: 'hidden', background: AURORA, padding: '16px 14px 22px', color: '#ffffff' }}>
-        {/* Soft colour blobs behind the glass */}
-        <div style={{ position: 'absolute', top: '-60px', right: '-50px', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(56,189,248,0.55)', filter: 'blur(50px)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: '120px', left: '-70px', width: '210px', height: '210px', borderRadius: '50%', background: 'rgba(251,113,133,0.5)', filter: 'blur(55px)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: '-60px', right: '-40px', width: '190px', height: '190px', borderRadius: '50%', background: 'rgba(253,224,71,0.45)', filter: 'blur(55px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'relative', padding: '4px 2px 22px', color: INK }}>
+        {/* Soft colour glows behind the cards (blur nahi, sirf halka gradient) */}
+        <div style={{ position: 'absolute', top: '-60px', right: '-50px', width: '230px', height: '230px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(244,114,182,0.30), transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: '120px', left: '-70px', width: '230px', height: '230px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(251,113,133,0.25), transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: '-60px', right: '-40px', width: '210px', height: '210px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(253,224,71,0.30), transparent 70%)', pointerEvents: 'none' }} />
 
         <div style={{ position: 'relative' }}>
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
             <div>
-              <h2 style={{ fontSize: '21px', fontWeight: 900, letterSpacing: '0.02em' }}>Planner</h2>
-              <p style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', marginTop: '1px' }}>Calendar, festivals & private plans</p>
+              <h2 style={{ fontSize: '21px', fontWeight: 900, letterSpacing: '0.02em', color: INK, textShadow: '0 0 16px rgba(251,113,133,0.4)' }}>{tx.planTitle}</h2>
+              <p style={{ fontSize: '11px', fontWeight: 800, color: textSub, marginTop: '1px' }}>{tx.planSub}</p>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button type="button" onClick={() => setShowList(true)} style={roundButton} aria-label="My Plans" title="My Plans">
+              <button type="button" onClick={() => setShowList(true)} style={roundButton} aria-label={tx.planMyPlans} title={tx.planMyPlans}>
                 <Lock size={17} />
               </button>
-              <button type="button" onClick={() => openNewPlan(null)} style={{ ...roundButton, background: 'linear-gradient(145deg, #ffffff, #ede9fe)', color: '#6d28d9', border: '1px solid #fff' }} aria-label="Add plan" title="Add plan">
+              <button type="button" onClick={() => openNewPlan(null)} style={{ ...roundButton, ...roseBtn }} aria-label={tx.planAdd} title={tx.planAdd}>
                 <Plus size={20} strokeWidth={3} />
               </button>
             </div>
@@ -214,10 +277,10 @@ export default function PlannerTab() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
-                    color: '#fff',
+                    color: INK,
                     cursor: 'pointer',
                     textAlign: 'left',
-                    ...(isToday ? { background: 'linear-gradient(145deg, rgba(255,226,130,0.55), rgba(255,130,170,0.4))', border: '1px solid rgba(255,240,180,0.95)' } : {}),
+                    ...(isToday ? goldGlow : {}),
                   };
 
                   if (slide.type === 'festival') {
@@ -233,13 +296,13 @@ export default function PlannerTab() {
                         }}
                         style={cardStyle}
                       >
-                        <span style={{ fontSize: '30px', filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.3))' }}>{nextFestival.festival.emoji}</span>
+                        <span style={{ fontSize: '30px' }}>{nextFestival.festival.emoji}</span>
                         <span style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ display: 'block', fontSize: '9.5px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.8)' }}>Next festival</span>
-                          <span style={{ display: 'block', fontSize: '15px', fontWeight: 900, marginTop: '1px' }}>{nextFestival.festival.names.en}</span>
-                          <span style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>{prettyShort(nextFestival.dateStr)}</span>
+                          <span style={{ display: 'block', fontSize: '9.5px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: textSub }}>{tx.planNextFestival}</span>
+                          <span style={{ display: 'block', fontSize: '15px', fontWeight: 900, marginTop: '1px', color: accentText }}>{festName(nextFestival.festival)}</span>
+                          <span style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: midText }}>{prettyShort(nextFestival.dateStr)}</span>
                         </span>
-                        <span style={{ fontSize: '11px', fontWeight: 900, padding: '6px 11px', borderRadius: '12px', background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.5)' }}>
+                        <span style={chipStyle}>
                           {daysText(nextFestival.daysLeft)}
                         </span>
                       </button>
@@ -250,18 +313,18 @@ export default function PlannerTab() {
                   const kind = getKind(plan.kind);
                   return (
                     <button key={slide.key} type="button" onClick={() => openEditPlan(plan)} style={cardStyle}>
-                      <span style={{ fontSize: '30px', filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.3))' }}>{kind.emoji}</span>
+                      <span style={{ fontSize: '30px' }}>{kind.emoji}</span>
                       <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ display: 'block', fontSize: '9.5px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' }}>
-                          {days === 0 ? '🎉 Today is the day' : '⏳ One week to go'}
+                        <span style={{ display: 'block', fontSize: '9.5px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: textSub }}>
+                          {days === 0 ? tx.planTodayIsDay : tx.planOneWeek}
                         </span>
-                        <span style={{ display: 'block', fontSize: '15px', fontWeight: 900, marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{plan.title}</span>
-                        <span style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>
-                          {days === 0 ? 'Today' : prettyShort(toDateStr(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7)))}, {formatTime(plan.time)}
+                        <span style={{ display: 'block', fontSize: '15px', fontWeight: 900, marginTop: '1px', color: accentText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{plan.title}</span>
+                        <span style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: midText }}>
+                          {days === 0 ? tx.planToday : prettyShort(toDateStr(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7)))}, {formatTime(plan.time)}
                         </span>
                       </span>
-                      <span style={{ fontSize: '11px', fontWeight: 900, padding: '6px 11px', borderRadius: '12px', background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.5)' }}>
-                        {days === 0 ? 'Today!' : 'In 7 days'}
+                      <span style={chipStyle}>
+                        {days === 0 ? tx.planTodayBang : tx.planIn7}
                       </span>
                     </button>
                   );
@@ -271,7 +334,7 @@ export default function PlannerTab() {
               {slideCount > 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '5px', marginTop: '8px' }}>
                   {slides.map((slide, i) => (
-                    <span key={slide.key} style={{ width: i === slideIndex ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === slideIndex ? '#fff' : 'rgba(255,255,255,0.45)', transition: 'all 0.2s' }} />
+                    <span key={slide.key} style={{ width: i === slideIndex ? '16px' : '6px', height: '6px', borderRadius: '3px', background: i === slideIndex ? '#e11d48' : 'rgba(251,113,133,0.4)', transition: 'all 0.2s' }} />
                   ))}
                 </div>
               )}
@@ -280,18 +343,18 @@ export default function PlannerTab() {
 
           {/* Month selector */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <button type="button" onClick={() => shiftMonth(-1)} style={{ ...roundButton, width: '38px', height: '38px', borderRadius: '13px' }} aria-label="Previous month">
+            <button type="button" onClick={() => shiftMonth(-1)} style={{ ...roundButton, width: '40px', height: '40px', borderRadius: '14px' }} aria-label={tx.planPrevMonth}>
               <ChevronLeft size={18} />
             </button>
             <div style={{ textAlign: 'center' }}>
-              <h3 style={{ fontSize: '17px', fontWeight: 900 }}>{MONTH_NAMES[viewMonth]} {viewYear}</h3>
+              <h3 style={{ fontSize: '17px', fontWeight: 900, color: INK }}>{monthName(viewMonth)} {viewYear}</h3>
               {!isCurrentMonth && (
-                <button type="button" onClick={goToday} style={{ marginTop: '3px', fontSize: '10px', fontWeight: 900, padding: '3px 10px', borderRadius: '10px', background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.5)', color: '#fff', cursor: 'pointer' }}>
-                  Back to today
+                <button type="button" onClick={goToday} style={{ marginTop: '3px', fontSize: '10px', fontWeight: 900, padding: '3px 10px', borderRadius: '10px', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(251,113,133,0.35)', color: accentText, cursor: 'pointer' }}>
+                  {tx.planBackToday}
                 </button>
               )}
             </div>
-            <button type="button" onClick={() => shiftMonth(1)} style={{ ...roundButton, width: '38px', height: '38px', borderRadius: '13px' }} aria-label="Next month">
+            <button type="button" onClick={() => shiftMonth(1)} style={{ ...roundButton, width: '40px', height: '40px', borderRadius: '14px' }} aria-label={tx.planNextMonth}>
               <ChevronRight size={18} />
             </button>
           </div>
@@ -303,9 +366,9 @@ export default function PlannerTab() {
 
           {/* Festivals this month */}
           <div style={{ ...glass, borderRadius: '26px', padding: '14px', marginTop: '18px' }}>
-            <h4 style={{ fontSize: '13px', fontWeight: 900, marginBottom: '8px' }}>🎊 Festivals in {MONTH_NAMES[viewMonth]}</h4>
+            <h4 style={{ fontSize: '13px', fontWeight: 900, marginBottom: '8px', color: INK }}>{fmt(tx.planFestivalsIn, { month: monthName(viewMonth) })}</h4>
             {monthFestivals.length === 0 ? (
-              <p style={{ fontSize: '11.5px', fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>No festival listed for this month.</p>
+              <p style={{ fontSize: '11.5px', fontWeight: 700, color: textSub }}>{tx.planNoFestMonth}</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {monthFestivals.map(({ dateStr, festivals }) =>
@@ -314,11 +377,11 @@ export default function PlannerTab() {
                       key={`${dateStr}-${f.id}`}
                       type="button"
                       onClick={() => setSelectedDate(dateStr)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '14px', background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', cursor: 'pointer', textAlign: 'left', opacity: dateStr < todayStr ? 0.6 : 1 }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '14px', background: 'rgba(244,63,94,0.06)', border: '1px solid rgba(251,113,133,0.2)', color: INK, cursor: 'pointer', textAlign: 'left', opacity: dateStr < todayStr ? 0.6 : 1 }}
                     >
                       <span style={{ fontSize: '20px' }}>{f.emoji}</span>
-                      <span style={{ flex: 1, fontSize: '12.5px', fontWeight: 900 }}>{f.names.en}</span>
-                      <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.85)' }}>{prettyShort(dateStr)}</span>
+                      <span style={{ flex: 1, fontSize: '12.5px', fontWeight: 900, color: accentText }}>{festName(f)}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: dateText }}>{prettyShort(dateStr)}</span>
                     </button>
                   ))
                 )}
@@ -331,36 +394,36 @@ export default function PlannerTab() {
       {/* ---------- Day sheet ---------- */}
       {selectedDate && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9050, display: 'flex', alignItems: 'flex-end' }}>
-          <div onClick={() => setSelectedDate(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(15,10,50,0.55)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)' }} />
-          <div style={{ position: 'relative', width: '100%', borderRadius: '32px 32px 0 0', padding: '20px 18px 26px', background: 'linear-gradient(160deg, rgba(79,70,229,0.96), rgba(124,58,237,0.96) 55%, rgba(190,40,120,0.96))', border: '1px solid rgba(255,255,255,0.35)', boxShadow: '0 -20px 50px rgba(20,10,80,0.5), inset 0 1px 0 rgba(255,255,255,0.5)', color: '#fff' }}>
+          <div onClick={() => setSelectedDate(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(60,10,30,0.45)' }} />
+          <div style={{ position: 'relative', width: '100%', borderRadius: '32px 32px 0 0', padding: '20px 18px 26px', background: c.isDark ? '#1e293b' : 'linear-gradient(170deg, #ffffff 0%, #fff3f8 55%, #ffe3ef 100%)', border: '1px solid rgba(251,113,133,0.3)', borderBottom: 'none', borderTop: '1px solid ' + c.glassTop, boxShadow: c.isDark ? '0 -18px 50px -12px rgba(0,0,0,0.6)' : '0 -18px 50px -12px rgba(244,63,94,0.45), inset 0 2px 0 #ffffff', color: INK }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
-              <span style={{ fontSize: '42px', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.35))' }}>{getDayEmoji(selectedDate)}</span>
+              <span style={{ fontSize: '42px' }}>{getDayEmoji(selectedDate)}</span>
               <div>
-                <h3 style={{ fontSize: '17px', fontWeight: 900 }}>
-                  {dateFromStr(selectedDate).getDate()} {MONTH_NAMES[dateFromStr(selectedDate).getMonth()]} {dateFromStr(selectedDate).getFullYear()}
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: INK }}>
+                  {dateFromStr(selectedDate).getDate()} {monthName(dateFromStr(selectedDate).getMonth())} {dateFromStr(selectedDate).getFullYear()}
                 </h3>
-                <p style={{ fontSize: '11.5px', fontWeight: 800, color: 'rgba(255,255,255,0.85)' }}>{WEEKDAY_NAMES[dateFromStr(selectedDate).getDay()]}</p>
+                <p style={{ fontSize: '11.5px', fontWeight: 800, color: textSub }}>{weekdayName(dateFromStr(selectedDate).getDay())}</p>
               </div>
             </div>
 
             {selectedFestivals.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
                 {selectedFestivals.map((f) => (
-                  <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 13px', borderRadius: '18px', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.4)' }}>
+                  <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 13px', borderRadius: '18px', ...goldGlow }}>
                     <span style={{ fontSize: '24px' }}>{f.emoji}</span>
                     <div>
-                      <p style={{ fontSize: '14px', fontWeight: 900 }}>{f.names.en}</p>
-                      <p style={{ fontSize: '10.5px', fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>Festival / special day</p>
+                      <p style={{ fontSize: '14px', fontWeight: 900, color: accentText }}>{festName(f)}</p>
+                      <p style={{ fontSize: '10.5px', fontWeight: 700, color: goldSub }}>{tx.planFestSpecial}</p>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.85)', marginBottom: '14px' }}>No festival on this day.</p>
+              <p style={{ fontSize: '12px', fontWeight: 700, color: textSub, marginBottom: '14px' }}>{tx.planNoFestDay}</p>
             )}
 
-            <button type="button" onClick={() => openNewPlan(selectedDate)} style={{ width: '100%', padding: '13px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.7)', background: 'linear-gradient(135deg, #ffffff, #ede9fe)', color: '#4c1d95', fontSize: '13.5px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 10px 24px rgba(20,10,80,0.35)' }}>
-              + Add a plan for this day
+            <button type="button" onClick={() => openNewPlan(selectedDate)} style={{ ...roseBtn, width: '100%', padding: '13px', borderRadius: '18px', fontSize: '13.5px', fontWeight: 900, cursor: 'pointer' }}>
+              {tx.planAddForDay}
             </button>
           </div>
         </div>

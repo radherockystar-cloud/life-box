@@ -22,6 +22,10 @@ jobs:
 
     - name: Build Web App
       run: npm run build
+      env:
+        # .env GitHub par nahi jaati, isliye keys GitHub Secrets se aati hain
+        VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+        VITE_FEEDBACK_KEY: ${{ secrets.VITE_FEEDBACK_KEY }}
 
     - name: Sync Capacitor Android
       run: npx cap sync android

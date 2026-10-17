@@ -1,22 +1,58 @@
 import React from 'react';
 import { Info, Sparkles } from 'lucide-react';
 import { translations } from '../utils/translations';
+import LegalDoc from './LegalDoc';
+
+const SECTIONS = [
+  {
+    h: 'What is Life Box?',
+    p: [
+      'Life Box is your private place to keep your life organised and your best moments safe. Write notes, save memories with photos and videos, set goals, record voice notes and plan your days, all in one app and in one beautiful space.',
+    ],
+  },
+  {
+    h: 'What you can do',
+    list: [
+      'Planner: see festivals and special days on a calendar, add private plans such as birthdays and anniversaries, and get reminders 7 days before and on the day.',
+      'Notes: write and organise notes, and pin your favourites to the top.',
+      'Memories: keep photos, videos and stories of special moments with tags.',
+      'Goals and Voice notes: track your progress and record your thoughts.',
+      'Life Meter: enter a date of birth and see your age, days lived and more.',
+      'AI Assistant: chat like with a friend and ask about your saved notes, goals and plans.',
+    ],
+  },
+  {
+    h: 'Privacy first',
+    p: [
+      'There is no sign-up. Your content is stored on your own device, not on our servers. It is shared only when you choose to use the AI Assistant or send feedback. Read the Privacy Policy from the menu for full details.',
+    ],
+  },
+  {
+    h: 'Made in India',
+    p: ['Life Box is designed and built in India with care, and we keep improving it with your feedback. Tell us what you love and what you would like to see next from the Feedback & Support page.'],
+  },
+];
 
 export default function AboutView({ currentTheme, currentLang }) {
   const t = translations[currentLang] || translations.en;
+  const dark = currentTheme === 'dark';
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div style={{ padding: '10px', borderRadius: '14px', background: '#e0f2fe', color: '#0284c7' }}><Info size={20} /></div>
-        <h3 style={{ fontSize: '16px', fontWeight: '900', color: currentTheme === 'dark' ? '#f9fafb' : '#111827' }}>{t.about}</h3>
-      </div>
-      <div style={{ padding: '20px', borderRadius: '20px', background: currentTheme === 'dark' ? '#1e293b' : '#fafafa', border: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0284c7', fontSize: '12px', fontWeight: '900' }}><Sparkles size={16} /> Professional Life Ecosystem</div>
-        <p style={{ fontSize: '12px', color: currentTheme === 'dark' ? '#d1d5db' : '#4b5563', lineHeight: '1.7', fontWeight: '600' }}>{t.aboutDesc}</p>
-        <div style={{ padding: '12px', borderRadius: '12px', background: currentTheme === 'dark' ? '#0f172a' : '#ffffff', border: '1px solid rgba(244,63,94,0.2)', textAlign: 'center' }}>
-          <span style={{ fontSize: '12px', fontWeight: '900', color: '#f43f5e' }}>{t.dev}</span>
+    <LegalDoc
+      dark={dark}
+      icon={Info}
+      iconBg="#e0f2fe"
+      iconColor="#0284c7"
+      title={t.about}
+      badgeIcon={Sparkles}
+      badge="Your life, organised"
+      badgeColor="#0284c7"
+      sections={SECTIONS}
+      numbered={false}
+      footer={
+        <div style={{ padding: '12px', borderRadius: '12px', background: dark ? '#0f172a' : '#ffffff', border: '1px solid rgba(244,63,94,0.2)', textAlign: 'center' }}>
+          <span style={{ fontSize: '12px', fontWeight: '900', color: '#f43f5e' }}>Developed by Radhe Rocky Star</span>
         </div>
-      </div>
-    </div>
+      }
+    />
   );
 }

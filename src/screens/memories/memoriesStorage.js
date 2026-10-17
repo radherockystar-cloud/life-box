@@ -1,18 +1,20 @@
+import { appStorage } from "../../utils/appStorage";
+
 export const STORAGE_KEY = "life_box_memories_v2";
 
 export const loadMemories = () => {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = appStorage.getItem(STORAGE_KEY);
     return saved ? JSON.parse(saved) : [];
   } catch {
     return [];
   }
 };
 
-// Returns false if the browser storage is full (many / big photos)
+// Returns false if the storage write fails (appStorage = IndexedDB, so "full" is now rare)
 export const saveMemories = (memories) => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(memories));
+    appStorage.setItem(STORAGE_KEY, JSON.stringify(memories));
     return true;
   } catch {
     return false;

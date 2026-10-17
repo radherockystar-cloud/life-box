@@ -1,5 +1,8 @@
 import React from "react";
 import { ImagePlus, Trash2, Save, ArrowLeft } from "lucide-react";
+import { MEMORIES_CSS } from "./memoriesTheme";
+import { MEMORIES_DARK_CSS } from "./memoriesDark";
+import { useApp } from "../../context/AppContext";
 
 // "Create Memory" screen: title, tag, photos and a description for each photo.
 export default function MemoryCreateForm({
@@ -14,25 +17,32 @@ export default function MemoryCreateForm({
   saveMemory,
   onClose,
 }) {
+  // Theme (c) + language (t) poore app wale context se
+  const { c, t } = useApp();
+  const labelColor = c.isDark ? c.textSub : "#a8264f";
+
   return (
-      <div className="min-h-screen bg-white pb-28">
+      <div className="mm-pagebg min-h-screen pb-28">
+        <style>{`${MEMORIES_CSS}
+${MEMORIES_DARK_CSS}`}</style>
+
         {/* CREATE HEADER */}
 
-        <div className="sticky top-0 z-30 bg-white border-b border-rose-100 px-4 py-4 flex items-center gap-3">
+        <div className="mm-head sticky top-0 z-30 px-4 py-4 flex items-center gap-3">
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-500"
+            className="mm-icon w-11 h-11 flex items-center justify-center"
           >
             <ArrowLeft size={21} />
           </button>
 
           <div className="flex-1">
-            <h2 className="font-bold text-gray-800 text-lg">
-              Create Memory
+            <h2 className="font-black text-lg" style={{ color: c.text }}>
+              {t.memCreateTitle}
             </h2>
 
-            <p className="text-xs text-gray-400">
-              Apni yaadon ki book banao
+            <p className="text-xs font-bold" style={{ color: c.textSub }}>
+              {t.memCreateSub}
             </p>
           </div>
         </div>
@@ -41,8 +51,8 @@ export default function MemoryCreateForm({
           {/* TITLE */}
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Memory Title
+            <label className="block text-sm font-extrabold mb-2" style={{ color: labelColor }}>
+              {t.memTitleLabel}
             </label>
 
             <input
@@ -50,16 +60,16 @@ export default function MemoryCreateForm({
               onChange={(e) =>
                 setMemoryTitle(e.target.value)
               }
-              placeholder="Jaise: My Birthday Memories"
-              className="w-full px-4 py-3.5 rounded-2xl border border-rose-100 bg-white shadow-sm outline-none focus:ring-2 focus:ring-rose-300"
+              placeholder={t.memTitlePh}
+              className="mm-field w-full px-4 py-3.5 rounded-2xl outline-none font-semibold"
             />
           </div>
 
           {/* TAG */}
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Tag
+            <label className="block text-sm font-extrabold mb-2" style={{ color: labelColor }}>
+              {t.memTagLabel}
             </label>
 
             <input
@@ -67,8 +77,8 @@ export default function MemoryCreateForm({
               onChange={(e) =>
                 setMemoryTag(e.target.value)
               }
-              placeholder="Memory"
-              className="w-full px-4 py-3.5 rounded-2xl border border-rose-100 bg-white shadow-sm outline-none focus:ring-2 focus:ring-rose-300"
+              placeholder={t.memTagPh}
+              className="mm-field w-full px-4 py-3.5 rounded-2xl outline-none font-semibold"
             />
           </div>
 
@@ -76,27 +86,27 @@ export default function MemoryCreateForm({
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-bold text-gray-700">
-                Photos
+              <label className="text-sm font-extrabold" style={{ color: labelColor }}>
+                {t.memPhotosLabel}
               </label>
 
               <span className="text-xs text-rose-500 font-bold">
-                {pages.length} Added
+                {pages.length} {t.memAdded}
               </span>
             </div>
 
-            <label className="flex flex-col items-center justify-center min-h-32 rounded-3xl border-2 border-dashed border-rose-200 bg-rose-50/50 cursor-pointer active:scale-[0.99] transition">
+            <label className="mm-drop flex flex-col items-center justify-center min-h-32 rounded-3xl cursor-pointer active:scale-[0.99] transition">
               <ImagePlus
                 size={32}
                 className="text-rose-500 mb-2"
               />
 
-              <span className="font-bold text-rose-600">
-                Add Multiple Photos
+              <span className="font-black" style={{ color: c.selectedText }}>
+                {t.memAddMulti}
               </span>
 
-              <span className="text-xs text-gray-400 mt-1">
-                Gallery se photos select karo
+              <span className="text-xs font-semibold mt-1" style={{ color: c.textSub }}>
+                {t.memAddMultiSub}
               </span>
 
               <input
@@ -113,43 +123,44 @@ export default function MemoryCreateForm({
 
           {pages.length > 0 && (
             <div className="space-y-5">
-              <h3 className="font-bold text-gray-800">
-                Photos & Descriptions
+              <h3 className="font-black" style={{ color: c.text }}>
+                {t.memPhotosDescTitle}
               </h3>
 
               {pages.map((page, index) => (
                 <div
                   key={page.id}
-                  className="rounded-3xl border border-rose-100 bg-white shadow-sm overflow-hidden"
+                  className="mm-card rounded-3xl overflow-hidden"
                 >
                   {/* IMAGE */}
 
-                  <div className="relative bg-gray-100">
+                  <div className="relative" style={{ background: c.isDark ? "#0f172a" : "#ffeaf3" }}>
                     <img
                       src={page.image}
                       alt=""
-                      className="w-full h-56 object-contain bg-gray-100"
+                      className="w-full h-56 object-contain"
+                      style={{ background: c.isDark ? "#0f172a" : "#ffeaf3" }}
                     />
 
                     <button
                       onClick={() =>
                         removePhoto(page.id)
                       }
-                      className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white shadow-md flex items-center justify-center text-red-500"
+                      className="mm-solid absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center"
                     >
                       <Trash2 size={17} />
                     </button>
 
-                    <div className="absolute bottom-3 left-3 px-3 py-1 rounded-full bg-black/60 text-white text-xs font-bold">
-                      Page {index + 1}
+                    <div className="absolute bottom-3 left-3 px-3 py-1 rounded-full bg-[rgba(60,10,30,0.6)] text-white text-xs font-bold">
+                      {t.memPageN.replace("{n}", index + 1)}
                     </div>
                   </div>
 
                   {/* DESCRIPTION */}
 
                   <div className="p-4">
-                    <label className="block text-xs font-bold text-gray-500 mb-2">
-                      Is photo ki description
+                    <label className="block text-xs font-extrabold mb-2" style={{ color: c.textSub }}>
+                      {t.memDescLabel}
                     </label>
 
                     <textarea
@@ -160,9 +171,9 @@ export default function MemoryCreateForm({
                           e.target.value
                         )
                       }
-                      placeholder="Is photo ke baare mein apni yaad likho..."
+                      placeholder={t.memDescPh}
                       rows={4}
-                      className="w-full resize-none px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 outline-none focus:ring-2 focus:ring-rose-300 text-sm"
+                      className="mm-field w-full resize-none px-4 py-3 rounded-2xl outline-none text-sm font-semibold"
                     />
                   </div>
                 </div>
@@ -174,10 +185,10 @@ export default function MemoryCreateForm({
 
           <button
             onClick={saveMemory}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-600 text-white font-bold shadow-lg flex items-center justify-center gap-2 active:scale-[0.98] transition"
+            className="mm-primary w-full py-4 flex items-center justify-center gap-2 active:scale-[0.98] transition"
           >
             <Save size={20} />
-            Save Memory
+            {t.memSave}
           </button>
         </div>
       </div>

@@ -42,7 +42,11 @@ export const capList = (list, maxChars) => {
   return sorted;
 };
 
+// Abhi AI ko user ka saved data (notes, goals, memories, plans) nahi dikhta. Pro plan par true kar dena.
+export const AI_CAN_READ_APP_DATA = false;
+
 export const buildAppData = (storage) => {
+  if (!AI_CAN_READ_APP_DATA) return '';
   const notes = readJson(storage, 'lifebox_keep_notes');
   const vault = readJson(storage, 'newlife_vault'); // goals, voices, memories...
   const plans = readJson(storage, 'lifebox_planner_plans');
@@ -61,6 +65,18 @@ export const todayInfo = (now = new Date()) => ({
 
 export const buildSystemInstruction = (appData, now = new Date()) => {
   const t = todayInfo(now);
+  const dataSection = appData
+    ? `THE USER'S SAVED LIFE BOX DATA (below)
+- When asked about their notes, goals, memories, voice notes, plans or "what did I do on <date>", answer ONLY from this data. Mention the dates.
+- If nothing is saved for that date or topic, say so honestly. Never invent records.
+- This is only what is saved right now. Deleted or unsaved things are not here, and items without a date cannot be placed on a date.
+
+`
+    : `PRIVACY
+- You cannot see the user's saved Life Box data (notes, goals, memories, voice notes, plans) in this chat.
+- If they ask about any of it, say honestly that you cannot see it and they can open that section of the app. Never invent records.
+
+`;
   return `You are the user's close friend and personal assistant inside the "Life Box" app.
 
 HOW TO TALK
@@ -69,12 +85,7 @@ HOW TO TALK
 - Keep replies short and conversational unless the user asks for detail. Use emojis lightly.
 - You can talk about anything: general questions, advice, studies, coding, feelings, jokes, plans.
 
-THE USER'S SAVED LIFE BOX DATA (below)
-- When asked about their notes, goals, memories, voice notes, plans or "what did I do on <date>", answer ONLY from this data. Mention the dates.
-- If nothing is saved for that date or topic, say so honestly. Never invent records.
-- This is only what is saved right now. Deleted or unsaved things are not here, and items without a date cannot be placed on a date.
-
-TODAY: ${t.text} (${t.iso}). Work out words like "aaj", "kal", "parso", "last week" from today's date.
+${dataSection}TODAY: ${t.text} (${t.iso}). Work out words like "aaj", "kal", "parso", "last week" from today's date.
 
 ${appData}`;
 };
