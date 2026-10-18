@@ -1,11 +1,55 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Home, Heart, Calendar, User, Lock } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useEntitlements } from '../utils/billing';
 
+
+// Keyboard khula hai ya nahi. Keyboard khulte hi neeche ke 4 tab usse upar dikhte the; ab wo chhup jate hain.
+// 1) Screen ki unchai kam ho jaye (Android me keyboard se) -> keyboard khula.
+// 2) Agar app screen ko chhota karta hi nahi, to text box par focus hone se pata chalta hai.
+const TEXT_TYPES = ['checkbox', 'radio', 'button', 'submit', 'range', 'file', 'color', 'image', 'reset'];
+const isTextField = (el) =>
+  !!el && (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable || (el.tagName === 'INPUT' && !TEXT_TYPES.includes(el.type)));
+
+function useKeyboardOpen() {
+  const [shrunk, setShrunk] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const resizeSeen = useRef(false);
+  const maxH = useRef(typeof window !== 'undefined' ? window.innerHeight : 0);
+  const lastW = useRef(typeof window !== 'undefined' ? window.innerWidth : 0);
+
+  useEffect(() => {
+    const onResize = () => {
+      resizeSeen.current = true;
+      if (window.innerWidth !== lastW.current) {
+        // phone ghuma: naya naap lo
+        lastW.current = window.innerWidth;
+        maxH.current = window.innerHeight;
+        setShrunk(false);
+        return;
+      }
+      if (window.innerHeight > maxH.current) maxH.current = window.innerHeight;
+      setShrunk(window.innerHeight < maxH.current - 150);
+    };
+    const onIn = (e) => { if (isTextField(e.target)) setFocused(true); };
+    const onOut = () => setTimeout(() => setFocused(isTextField(document.activeElement)), 60);
+    window.addEventListener('resize', onResize);
+    document.addEventListener('focusin', onIn);
+    document.addEventListener('focusout', onOut);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      document.removeEventListener('focusin', onIn);
+      document.removeEventListener('focusout', onOut);
+    };
+  }, []);
+
+  return shrunk || (focused && !resizeSeen.current);
+}
+
 export default function BottomNav({ activeTab, setActiveTab }) {
   const { c, t } = useApp();
   const ent = useEntitlements();
+  const keyboardOpen = useKeyboardOpen();
   const light = !c.isDark; // light theme me Notes jaisa glossy, dark me pehle jaisa
 
   const tabs = [
@@ -14,6 +58,8 @@ export default function BottomNav({ activeTab, setActiveTab }) {
     { id: 'planner', label: t.navPlanner, icon: Calendar },
     { id: 'me', label: t.navMe, icon: User },
   ];
+
+  if (keyboardOpen) return null; // keyboard khula ho to tab mat dikhao
 
   return (
     <nav 
