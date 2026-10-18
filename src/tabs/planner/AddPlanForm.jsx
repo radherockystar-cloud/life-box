@@ -66,7 +66,7 @@ export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
   const [time, setTime] = useState(plan ? plan.time : '09:00');
   const [repeatYearly, setRepeatYearly] = useState(plan ? plan.repeatYearly : getKind('birthday').yearly);
   const [note, setNote] = useState(plan ? plan.note : '');
-  const [error, setError] = useState('');
+  const [, setError] = useState('');
 
   const daysInMonth = new Date(year, month, 0).getDate();
   const safeDay = Math.min(day, daysInMonth);
@@ -84,14 +84,12 @@ export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
   };
 
   const handleSave = () => {
-    if (!title.trim()) {
-      setError(tx.apErrTitle);
-      return;
-    }
+    // Title khaali ho to plan ke type ka naam (Birthday, Event...) use hota hai, taaki Save hamesha chale
+    const finalTitle = title.trim() || kindLabel(getKind(kind));
 
     onSave({
       id: plan ? plan.id : Date.now(),
-      title: title.trim(),
+      title: finalTitle,
       note: note.trim(),
       date: chosenDate,
       time: time || '09:00',
@@ -186,7 +184,6 @@ export default function AddPlanForm({ plan, defaultDate, onSave, onClose }) {
             className="pl-field"
             style={fieldStyle}
           />
-          {error && <p style={{ fontSize: '11px', fontWeight: 800, color: c.selectedText, marginTop: '6px' }}>{error}</p>}
         </div>
 
         {/* Date */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, ImagePlus, X, History, Plus, Trash2 } from 'lucide-react';
+import { Send, Bot, ImagePlus, X, History, Plus, Trash2, Flag } from 'lucide-react';
 import { useBackHandler } from '../utils/useBackHandler';
 import {
   DEFAULT_MODELS,
@@ -40,6 +40,27 @@ const loadChats = () => {
 
 const formatWhen = (ts) =>
   new Date(ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+
+// AI jawab ki shikayat (Play Store AI-content policy): feedback wale web3forms se email aati hai
+const reportReply = async (aiText, userText) => {
+  const key = import.meta.env.VITE_FEEDBACK_KEY;
+  if (!key) return false;
+  try {
+    const res = await fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        access_key: key,
+        subject: 'Life Box: AI reply reported',
+        message: `User message:\n${(userText || '').slice(0, 1200)}\n\nReported AI reply:\n${(aiText || '').slice(0, 3000)}`,
+      }),
+    });
+    const data = await res.json();
+    return !!data.success;
+  } catch (e) {
+    return false;
+  }
+};
 
 const THINK_EMOJIS = ['🤔', '💭', '🧠', '💡', '✨'];
 
@@ -134,6 +155,7 @@ export default function AiChatAppScreen({ onBack }) {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const [thinkIdx, setThinkIdx] = useState(0);
+  const [reported, setReported] = useState({}); // index -> 'sending' | 'done' | 'fail'
   const ent = useEntitlements(); // Pro hai ya free messages bache hain?
   const aiLocked = ent.aiBlocked;
 
@@ -189,6 +211,7 @@ export default function AiChatAppScreen({ onBack }) {
   const startNewChat = () => {
     if (loading) return;
     chatIdRef.current = null;
+    setReported({});
     setMessages([]);
     setInputVal('');
     setSelectedImage(null);
@@ -198,6 +221,7 @@ export default function AiChatAppScreen({ onBack }) {
   const openChat = (chat) => {
     if (loading) return;
     chatIdRef.current = chat.id;
+    setReported({});
     setMessages((chat.messages || []).filter((m) => !m.isWelcome));
     setInputVal('');
     setSelectedImage(null);
@@ -211,6 +235,15 @@ export default function AiChatAppScreen({ onBack }) {
       chatIdRef.current = null;
       setMessages([]);
     }
+  };
+
+  const handleReport = async (idx) => {
+    if (reported[idx] === 'sending' || reported[idx] === 'done') return;
+    if (!window.confirm('Report this AI reply as harmful or incorrect?')) return;
+    setReported((r) => ({ ...r, [idx]: 'sending' }));
+    const prevUser = [...messages.slice(0, idx)].reverse().find((x) => x.sender === 'user');
+    const ok = await reportReply(messages[idx].text, prevUser?.text);
+    setReported((r) => ({ ...r, [idx]: ok ? 'done' : 'fail' }));
   };
 
   const handleImageUpload = (e) => {
@@ -423,6 +456,17 @@ export default function AiChatAppScreen({ onBack }) {
             <div style={m.sender === 'user' ? userBubble : m.isError ? errBubble : aiBubble}>
               {m.image && <img src={m.image} alt="Uploaded" style={{ width: '160px', height: '160px', objectFit: 'cover', borderRadius: '14px', marginBottom: '8px', display: 'block' }} />}
               {m.text}
+              {m.sender === 'ai' && !m.isError && !m.isWelcome && (
+                <button
+                  type="button"
+                  onClick={() => handleReport(idx)}
+                  disabled={reported[idx] === 'sending' || reported[idx] === 'done'}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px', padding: 0, fontSize: '10.5px', fontWeight: 800, color: '#b0587a', cursor: 'pointer', background: 'transparent', border: 'none' }}
+                >
+                  <Flag size={11} />
+                  {reported[idx] === 'done' ? 'Reported. Thank you!' : reported[idx] === 'sending' ? 'Sending...' : reported[idx] === 'fail' ? 'Could not send. Tap to retry' : 'Report this reply'}
+                </button>
+              )}
             </div>
           </div>
         ))}
