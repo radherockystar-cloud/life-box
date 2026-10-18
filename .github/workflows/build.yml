@@ -45,8 +45,12 @@ jobs:
       run: |
         mkdir -p ~/.android
         echo "$KS" | base64 -d > ~/.android/debug.keystore
+        ls -l ~/.android
+        keytool -list -v -keystore ~/.android/debug.keystore -storepass android | grep -i "SHA1"
 
     - name: Build Android APK
+      env:
+        ANDROID_USER_HOME: /home/runner/.android
       run: |
         cd android
         ./gradlew assembleDebug
