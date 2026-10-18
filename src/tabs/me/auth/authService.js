@@ -83,6 +83,13 @@ const withTimeout = (promise, ms, fallback) =>
     new Promise((resolve) => setTimeout(() => resolve(fallback), ms)),
   ]);
 
+// Intezaar sirf ms tak. Error aaye to wahi error milta hai (chhupta nahi); time khatam ho to { timedOut: true }.
+const withDeadline = (promise, ms) =>
+  Promise.race([
+    Promise.resolve(promise).then((value) => ({ timedOut: false, value })),
+    new Promise((resolve) => setTimeout(() => resolve({ timedOut: true }), ms)),
+  ]);
+
 // "Login" tab se Google se aisa user aaye jiska account nahi hai, to Firebase use turant naya account bana deta hai.
 // Hum use rokte hain: naya bana account hata dete hain aur "account nahi mila" batate hain.
 // Is dauran (gate on) app is naye user ko "login hua" nahi maanta.
@@ -137,7 +144,7 @@ export async function sendReset(email) {
 export async function logOut() {
   const uid = auth.currentUser && auth.currentUser.uid;
   let allSynced = false;
-  if (uid) allSynced = (await withTimeout(syncBeforeLogout(uid), 6000, false)) === true;
+  if (uid) allSynced = (await withTimeout(syncBeforeLogout(uid), 4000, false)) === true;
   await signOut(auth);
   if (isNative()) await withTimeout(NativeGoogle.signOut(), 3000, null);
   if (allSynced) {
@@ -177,9 +184,13 @@ export async function deleteMyAccount({ password } = {}) {
     }
   }
 
-  // Cloud profile aur cloud ka saara data (Storage) pehle hatao (agar yeh fail ho to account nahi hatega, taaki data adhura na rahe)
-  await deleteCloudData(user.uid);
-  await deleteDoc(doc(db, 'users', user.uid, 'profile', 'data'));
+  // Cloud ka saara data aur profile pehle hatao. Agar yeh fail ho (error aaye) to account nahi hatega, taaki data adhura na rahe.
+  // Par agar cloud (Storage) tak pahunch hi nahi paa rahe aur bahut der lage, to wahin atke nahi rehte:
+  // time khatam hone par aage badhte hain (jab tak Storage chalu nahi hai, cloud me kuch hai bhi nahi).
+  const cloud = await withDeadline(deleteCloudData(user.uid), 12000);
+  if (cloud.timedOut) console.warn('Cloud data delete timed out; continuing with account delete');
+  const prof = await withDeadline(deleteDoc(doc(db, 'users', user.uid, 'profile', 'data')), 8000);
+  if (prof.timedOut) console.warn('Profile delete timed out; continuing with account delete');
   await deleteUser(user);
 }
 
