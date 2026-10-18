@@ -2,13 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#F43F5E" />
     <title>Life Box</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Splash jaisa hi gulabi screen: app ka JS load hone tak (React aate hi ye hat jata hai) -->
+      <div id="boot" style="position:fixed;top:0;right:0;bottom:0;left:0;display:flex;align-items:center;justify-content:center;background:#F43F5E">
+        <svg width="132" height="132" viewBox="262 140 500 652" aria-hidden="true">
+          <path fill="#fff" d="M512 470C512 470 330 360 330 262C330 200 378 160 430 160C468 160 497 182 512 212C527 182 556 160 594 160C646 160 694 200 694 262C694 360 512 470 512 470Z" transform="translate(0 -6)"/>
+          <rect x="296" y="548" width="432" height="244" rx="44" fill="#fff"/>
+          <rect x="262" y="480" width="500" height="96" rx="34" fill="#FFE3EA"/>
+          <rect x="478" y="480" width="68" height="312" rx="8" fill="#FB7185"/>
+        </svg>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

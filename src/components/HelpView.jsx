@@ -51,8 +51,8 @@ const FAQ = [
   {
     q: 'How do I use the AI Assistant?',
     a: [
-      'Open AI Assistant from Home and type a message, just like chatting with a friend. You can attach a photo, ask general questions or ask about your saved notes, goals, memories and plans. Tap + for a new chat and the history button to reopen an earlier chat.',
-      'The AI Assistant needs an internet connection. Its answers can sometimes be wrong, so please double-check anything important. Your message and related saved text are sent to Google’s Gemini service to create the reply, as explained in the Privacy Policy.',
+      'Open AI Assistant from Home and type a message, just like chatting with a friend. You can attach a photo and ask general questions. The AI Assistant does not read your saved notes, goals, memories or plans. Tap + for a new chat and the history button to reopen an earlier chat.',
+      'Free users get a small number of AI messages. After that, a Pro plan is needed to keep chatting. Pro includes a generous monthly AI allowance; if you use it all, the AI Assistant pauses until the 1st of next month. The AI Assistant needs an internet connection and its answers can sometimes be wrong, so please double-check anything important. The messages you type in the chat (and photos you attach) are sent to Google’s Gemini service to create the reply, as explained in the Privacy Policy.',
     ],
   },
   {
@@ -66,8 +66,15 @@ const FAQ = [
   {
     q: 'Where is my data stored? Can I lose it?',
     a: [
-      'Your content is stored only on your device. There is no cloud account. This keeps your data private, but it also means that uninstalling the app, clearing its data or losing your phone can delete everything permanently, and we cannot restore it.',
-      'If something is very important, please keep a copy of it elsewhere as well.',
+      'If you use Life Box as a guest, your content is stored only on your device. Uninstalling the app, clearing its data or losing your phone can then delete everything permanently, and we cannot restore it.',
+      'If you log in, your content is also saved to your private cloud space (Google Firebase), so you can open it on other devices and restore it on a new phone. Logging out first uploads your changes. For anything very important, you can also keep a copy with Backup / Export.',
+    ],
+  },
+  {
+    q: 'How do subscriptions work?',
+    a: [
+      'Life Box is free to use with limits. Pro unlocks the AI chat (with a fair monthly allowance) and the Memories tab. Ad-free removes ads from the whole app. There is also a Pro + Ad-free plan. All plans are billed monthly through Google Play. Open Me > Manage Subscription to see the plans.',
+      'To cancel, open Google Play > Payments & subscriptions > Subscriptions, choose Life Box and tap Cancel. You keep the plan until the end of the period you paid for. Your saved data is never deleted when a plan ends; the paid features simply lock again. If you reinstall the app or change phone, open Manage Subscription and tap Restore purchases.',
     ],
   },
   {

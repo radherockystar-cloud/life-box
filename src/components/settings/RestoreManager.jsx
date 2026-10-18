@@ -32,7 +32,7 @@ export default function RestoreManager({ currentTheme }) {
 
   const runRestore = (full, sourceName) =>
     confirmAndRun(
-      `${sourceName} se ${Object.keys(full.map).length} items aur ${Object.keys(full.media).length} photos/videos/voices restore honge. Abhi ka data in items se replace ho jayega. Aage badhein?`,
+      `${sourceName} se ${Object.keys(full.map).length} items aur ${Object.keys(full.media).length} photos/videos/voices restore honge. Ye items abhi ke data par likhe jayenge (jo items backup me nahi hain wo waise hi rahenge). Aage badhein?`,
       () => applyBackupData(full.map, full.media)
     );
 
@@ -63,7 +63,7 @@ export default function RestoreManager({ currentTheme }) {
     if (await hasInternalSnapshot()) {
       const info = await internalSnapshotInfo();
       confirmAndRun(
-        `Internal snapshot se ${info ? info.items : 0} items aur ${info ? info.media : 0} photos/videos/voices restore honge. Abhi ka data in items se replace ho jayega. Aage badhein?`,
+        `Internal snapshot se ${info ? info.items : 0} items aur ${info ? info.media : 0} photos/videos/voices restore honge. Ye items abhi ke data par likhe jayenge (jo items backup me nahi hain wo waise hi rahenge). Aage badhein?`,
         () => restoreInternalSnapshot()
       );
       return;

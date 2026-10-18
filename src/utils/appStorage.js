@@ -200,11 +200,19 @@ export function initAppStorage() {
 export const isAppStorageReady = () => ready;
 export const isUsingFallback = () => useLocal;
 
-// Sab pending writes IndexedDB me pahunchne tak ruko (sync / backup se pehle bulao)
+// Dusre modules (jaise cloudSync) apna pending kaam flush me jod sakte hain
+const flushHooks = new Set();
+export const registerFlushHook = (fn) => {
+  flushHooks.add(fn);
+  return () => flushHooks.delete(fn);
+};
+
+// Sab pending writes IndexedDB me pahunchne tak ruko (sync / backup / restore ke baad reload se pehle bulao)
 export async function flushAppStorage() {
   await initAppStorage();
   if (queued.length) drain();
   await writeChain;
+  await Promise.all([...flushHooks].map((fn) => Promise.resolve().then(fn).catch(() => {})));
 }
 
 // ---------------------------------------------------------------- localStorage jaisa API

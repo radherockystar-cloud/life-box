@@ -22,8 +22,15 @@ import { appStorage, flushAppStorage } from './appStorage';
 const BACKUP_FORMAT = 'newlife-backup';
 const OLD_SLOT_KEY = 'newlife_system_backup_slot';
 
-// Never copied: login tokens, and the backup's own bookkeeping
-const EXCLUDED_PREFIXES = ['firebase:', 'newlife_system_backup_slot', 'newlife_last_backup_time'];
+// Never copied: login tokens, the backup's own bookkeeping, and the app lock (passcode must never sit in a
+// backup file, and restoring "lock on" without its passcode would lock the person out of their own app)
+const EXCLUDED_PREFIXES = [
+  'firebase:',
+  'newlife_system_backup_slot',
+  'newlife_last_backup_time',
+  'newlife_lock_enabled',
+  'newlife_passcode',
+];
 
 const isExcluded = (key) => EXCLUDED_PREFIXES.some((p) => key.startsWith(p));
 

@@ -18,13 +18,14 @@ const SECTIONS = [
       'Memories: keep photos, videos and stories of special moments with tags.',
       'Goals and Voice notes: track your progress and record your thoughts.',
       'Life Meter: enter a date of birth and see your age, days lived and more.',
-      'AI Assistant: chat like with a friend and ask about your saved notes, goals and plans.',
+      'AI Assistant: chat like with a friend and ask anything.',
+      'Login (optional): keep your data safe in your private cloud and use it on all your devices.',
     ],
   },
   {
     h: 'Privacy first',
     p: [
-      'There is no sign-up. Your content is stored on your own device, not on our servers. It is shared only when you choose to use the AI Assistant or send feedback. Read the Privacy Policy from the menu for full details.',
+      'You can use Life Box without signing up, and then your content stays only on your own device. If you choose to log in, your content is also saved to your private cloud space (Google Firebase) so you can use it on other devices. The AI Assistant does not read your saved items. Read the Privacy Policy from the menu for full details.',
     ],
   },
   {

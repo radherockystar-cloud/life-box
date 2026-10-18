@@ -34,7 +34,7 @@ export default function DeleteAccountModal({ user, onClose, onDeleted }) {
   return (
     <ConfirmDialog
       title={tx('meDeleteTitle')}
-      message={tx('meDeleteWarn')}
+      message={tx('meDeleteWarn2')}
       confirmLabel={busy ? tx('meDeleting') : tx('meDeleteBtn')}
       cancelLabel={tx('meCancel')}
       danger

@@ -1,7 +1,7 @@
 // AI chat ke chhote helpers (screen se alag rakhe hain taaki test ho sakein)
 
 // Google ka naya model naam pehle, purane baad mein. Pehla jo chal gaya wo yaad rakha jata hai.
-export const DEFAULT_MODELS = ['gemini-3.6-flash', 'gemini-flash-latest', 'gemini-3.5-flash'];
+export const DEFAULT_MODELS = ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.6-flash'];
 
 const readJson = (storage, key, fallback = []) => {
   try {

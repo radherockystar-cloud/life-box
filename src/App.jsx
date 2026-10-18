@@ -8,6 +8,10 @@ import HomeScreen from './screens/HomeScreen';
 import MemoriesScreen from './screens/MemoriesScreen';
 import PlannerTab from './tabs/planner/PlannerTab';
 import MeTab from './tabs/me/MeTab';
+import ProLock from './components/ProLock';
+import SubscriptionScreen from './tabs/me/subscription/SubscriptionScreen';
+import { useEntitlements, initBilling, PLANS_EVENT } from './utils/billing';
+import { setBannerVisible } from './utils/ads';
 import { AppProvider, useApp } from './context/AppContext';
 import { useBackHandler, runBackHandler } from './utils/useBackHandler';
 import { requestSync } from './tabs/planner/reminderService';
@@ -18,6 +22,8 @@ function AppShell() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [isSubAppOpen, setIsSubAppOpen] = useState(false);
+  const [plansOpen, setPlansOpen] = useState(false); // Subscription page (kahin se bhi khulta hai)
+  const ent = useEntitlements();
   
   // Search States
   const [isSearchActive, setIsSearchActive] = useState(false);
@@ -32,6 +38,24 @@ function AppShell() {
   });
   const [enteredPin, setEnteredPin] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // ---------- SUBSCRIPTION + ADS ----------
+  useEffect(() => {
+    initBilling(); // Play se pucho kaun sa plan chalu hai
+  }, []);
+
+  useEffect(() => {
+    const open = () => setPlansOpen(true);
+    window.addEventListener(PLANS_EVENT, open);
+    return () => window.removeEventListener(PLANS_EVENT, open);
+  }, []);
+
+  // Banner ad: free user ko, main screens par. Lock screen / sub-app / plans page me nahi.
+  const adsVisible = (!isLocked || isAuthenticated) && !isSubAppOpen && !plansOpen && !ent.adFree;
+  useEffect(() => {
+    setBannerVisible(adsVisible);
+  }, [adsVisible]);
+  // ----------------------------------------
 
   // ---------- APP BACKGROUND/FOREGROUND LOCK LISTENER ----------
   useEffect(() => {
@@ -338,13 +362,13 @@ function AppShell() {
       {/* Main Content Area */}
       <main style={{ flex: 1, padding: '16px', overflowY: 'auto', position: 'relative' }}>
         {activeTab === 'home' && <HomeScreen onSubAppToggle={setIsSubAppOpen} searchQuery={globalSearchQuery} />}
-        {activeTab === 'memories' && <MemoriesScreen />}
+        {activeTab === 'memories' && (ent.pro ? <MemoriesScreen /> : <ProLock />)}
         {activeTab === 'planner' && <PlannerTab />}
         {activeTab === 'me' && <MeTab />}
       </main>
 
       {/* Bottom Navigation */}
-      {!isSubAppOpen && (
+      {!isSubAppOpen && !plansOpen && (
         <div style={{ position: 'relative', zIndex: 10 }}>
           <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
@@ -356,6 +380,8 @@ function AppShell() {
         onClose={() => setIsDrawerOpen(false)} 
         setActiveTab={setActiveTab} 
       />
+
+      {plansOpen && <SubscriptionScreen onBack={() => setPlansOpen(false)} />}
 
       {showExitToast && (
         <div style={{ position: 'absolute', bottom: '90px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(17,24,39,0.9)', color: '#fff', padding: '8px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', zIndex: 100, whiteSpace: 'nowrap' }}>

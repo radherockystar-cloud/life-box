@@ -85,8 +85,13 @@ export const ME_DEFAULTS = {
   errPasswordNeeded: 'Please enter your password.',
   errRecentLogin: 'For safety, please login again and then retry.',
   errNotEnabled: 'This login method is not available yet.',
-  errGoogleSetup: 'Google login needs a one-time setup in this app. Please use email login for now.',
+  errGoogleSetup: 'Google login is not available right now. Please use email login.',
   errUserDisabled: 'This account has been disabled.',
+  errNoGoogleAccount: 'No account was found for this Google account. Please use the Sign up tab to create one first.',
+  meCloudOn: 'Logged in (cloud sync on)',
+  meCloudOff: 'Not logged in (data stays on this phone)',
+  meLoginFootnote2: 'Without login, your data stays only on this phone. After login, it is also saved to your private cloud so you can use it on other devices and restore it on a new phone.',
+  meDeleteWarn2: 'This permanently deletes your account, your profile and all your data saved in the cloud. This cannot be undone.',
   errPopupBlocked: 'The login window was blocked. Please allow pop-ups and try again.',
 };
 

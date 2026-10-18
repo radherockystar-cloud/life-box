@@ -1,9 +1,11 @@
 import React from 'react';
-import { Home, Heart, Calendar, User } from 'lucide-react';
+import { Home, Heart, Calendar, User, Lock } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useEntitlements } from '../utils/billing';
 
 export default function BottomNav({ activeTab, setActiveTab }) {
   const { c, t } = useApp();
+  const ent = useEntitlements();
   const light = !c.isDark; // light theme me Notes jaisa glossy, dark me pehle jaisa
 
   const tabs = [
@@ -67,6 +69,7 @@ export default function BottomNav({ activeTab, setActiveTab }) {
             </div>
             <span style={{ fontSize: '9px', marginTop: '2px', fontWeight: isActive ? '900' : '600' }}>
               {tab.label}
+              {tab.id === 'memories' && !ent.pro && <Lock size={8} style={{ marginLeft: '3px', verticalAlign: '-0.5px' }} />}
             </span>
           </button>
         );

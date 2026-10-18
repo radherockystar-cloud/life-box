@@ -3,6 +3,15 @@
   "appName": "Life Box",
   "webDir": "dist",
   "android": {
-    "useLegacyBridge": true
+    "useLegacyBridge": true,
+    "backgroundColor": "#F43F5E"
+  },
+  "plugins": {
+    "FirebaseAuthentication": {
+      "skipNativeAuth": true,
+      "providers": [
+        "google.com"
+      ]
+    }
   }
 }

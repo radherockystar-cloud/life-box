@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "955510250696",
+    "project_id": "lifebox-44c35",
+    "storage_bucket": "lifebox-44c35.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:955510250696:android:eb35921abf0209c17699fd",
+        "android_client_info": {
+          "package_name": "com.lifebox.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "955510250696-7615oe9680r16tirpcqs6fh3p5gje0as.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.lifebox.app",
+            "certificate_hash": "c59761be0c0386a0872905888180ed5f49be0b44"
+          }
+        },
+        {
+          "client_id": "955510250696-d85dmkdmnndj7ma3jcpgk6gml2018i8i.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDG3KN6THdfkxj7m0lHOtXkoz9kYYVQYyE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "955510250696-d85dmkdmnndj7ma3jcpgk6gml2018i8i.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

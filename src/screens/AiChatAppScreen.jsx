@@ -10,10 +10,11 @@ import {
   friendlyError,
 } from '../utils/aiChatHelpers';
 import { appStorage } from '../utils/appStorage';
+import { useEntitlements, consumeAiMessage, openPlans } from '../utils/billing';
 
 const CHATS_KEY = 'lifebox_ai_chats'; // saari purani chats (history)
 const OLD_CHAT_KEY = 'lifebox_ai_chat'; // pehle wale version ki ek chat
-const MODEL_KEY = 'lifebox_ai_model';
+const MODEL_KEY = 'lifebox_ai_model_v2'; // naya naam: purana yaad kiya hua mehenga model ignore ho jaye
 
 // Saari chats ki list (history). Pehle wali ek chat ho to usse history mein le aata hai.
 const loadChats = () => {
@@ -133,6 +134,8 @@ export default function AiChatAppScreen({ onBack }) {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const [thinkIdx, setThinkIdx] = useState(0);
+  const ent = useEntitlements(); // Pro hai ya free messages bache hain?
+  const aiLocked = ent.aiBlocked;
 
   // Jawab aane tak 3D emoji badalta rehta hai
   useEffect(() => {
@@ -267,6 +270,10 @@ export default function AiChatAppScreen({ onBack }) {
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if ((!inputVal.trim() && !selectedImage) || loading) return;
+    if (aiLocked) {
+      if (!ent.pro) openPlans(); // free messages khatam: Pro plan screen
+      return;
+    }
 
     const userMsg = {
       sender: 'user',
@@ -285,7 +292,8 @@ export default function AiChatAppScreen({ onBack }) {
 
     try {
       // Pichli baatein + ab ka message (photo ho to saath mein)
-      const contents = buildHistoryContents(messages);
+      const contents = buildHistoryContents(messages, 10);
+      contents.forEach((c) => c.parts.forEach((p) => { if (typeof p.text === 'string' && p.text.length > 1500) p.text = p.text.slice(-1500); }));
       const parts = [{ text: currentInput }];
       if (currentImage) {
         const base64Data = currentImage.split(',')[1];
@@ -305,6 +313,7 @@ export default function AiChatAppScreen({ onBack }) {
       });
 
       commit([...updatedMessages, { sender: 'ai', text: pickReplyText(data) }]);
+      consumeAiMessage(data); // kamyab jawab par free message / Pro ka kharcha judta hai
     } catch (error) {
       console.error('AI error:', error);
       commit([...updatedMessages, { sender: 'ai', isError: true, text: friendlyError(error) }]);
@@ -399,7 +408,7 @@ export default function AiChatAppScreen({ onBack }) {
             <div style={{ ...text3dBig, marginTop: '34px' }}>Hey! 👋</div>
             <div style={{ ...text3dMid, marginTop: '12px' }}>I&apos;m your Life Box friend</div>
             <p style={{ marginTop: '22px', maxWidth: '300px', fontSize: '13px', fontWeight: 700, lineHeight: 1.65, color: '#8a3358' }}>
-              Chat with me about anything, or ask about your notes, goals, memories and plans.
+              Chat with me about anything.
             </p>
           </div>
         )}
@@ -465,6 +474,36 @@ export default function AiChatAppScreen({ onBack }) {
         </div>
       )}
 
+      {/* AI limit ki jaankari: free = messages, Pro = mahine ka allowance */}
+      {ent.aiBanner && (
+        <div
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '10px',
+            padding: '8px 14px',
+            background: aiLocked ? 'rgba(254,226,226,0.95)' : 'rgba(255,247,237,0.95)',
+            borderTop: '1px solid rgba(251,113,133,0.25)',
+            fontSize: '11.5px',
+            fontWeight: 800,
+            color: aiLocked ? '#9f1239' : '#92400e',
+          }}
+        >
+          <span>{ent.aiBanner}</span>
+          {!ent.pro && (
+            <button
+              type="button"
+              onClick={openPlans}
+              style={{ flexShrink: 0, padding: '6px 12px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '11.5px', fontWeight: 900, color: '#fff', background: 'linear-gradient(160deg, #fb7185 0%, #e11d48 55%, #be123c 100%)' }}
+            >
+              {aiLocked ? 'Get Pro' : 'See plans'}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Input */}
       <form
         onSubmit={handleSendMessage}
@@ -487,7 +526,8 @@ export default function AiChatAppScreen({ onBack }) {
         <input
           type="text"
           className="lb-input"
-          placeholder="Ask anything or search your notes..."
+          maxLength={1200}
+          placeholder="Ask me anything..."
           value={inputVal}
           onChange={(e) => setInputVal(e.target.value)}
           style={{

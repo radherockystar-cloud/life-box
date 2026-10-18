@@ -18,7 +18,7 @@ import Toast from './ui/Toast';
 // Me tab: sirf screens ko jodta hai. Har kaam ki apni file hai:
 //   auth/          login, sign up, logout, account delete
 //   profile/       profile dikhana aur badalna
-//   subscription/  subscription (abhi "coming soon")
+//   subscription/  plans aur subscription
 //   ui/            chhote pop-up aur message
 export default function MeTab() {
   const th = useMeTheme();
@@ -72,12 +72,13 @@ export default function MeTab() {
     if (loggingOut) return;
     setLoggingOut(true);
     try {
-      await logOut(); // onAuthStateChanged baaki sab reset kar deta hai
-      setConfirmLogout(false);
+      await logOut(); // onAuthStateChanged baaki sab reset kar deta hai (logOut khud kabhi 20 sec se zyada nahi rukta)
       notify('success', tx('meLoggedOut'));
     } catch (error) {
       notify('error', tx('alertLogoutErr') + (error?.message || ''));
     }
+    // Pop-up har haal me band ho, taaki screen atki na rahe
+    setConfirmLogout(false);
     setLoggingOut(false);
   };
 

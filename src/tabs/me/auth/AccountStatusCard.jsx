@@ -17,7 +17,7 @@ export default function AccountStatusCard({ isLoggedIn, onLogin, onLogout, onDel
         <div>
           <h3 style={{ fontSize: '14px', fontWeight: 900, color: th.ink }}>{tx('meCloudStatus')}</h3>
           <p style={{ fontSize: '11.5px', fontWeight: 700, color: th.muted, marginTop: '1px' }}>
-            {isLoggedIn ? tx('meCloudActive') : tx('meCloudLocal')}
+            {isLoggedIn ? tx('meCloudOn') : tx('meCloudOff')}
           </p>
         </div>
       </div>

@@ -13,7 +13,9 @@ const SECTIONS = [
       'Planner with a calendar, festivals and private plans with reminders.',
       'Notes with favourites, Memories with photos and videos, Goals and Voice notes.',
       'Life Meter, which shows your age and life statistics from your date of birth.',
-      'AI Assistant for chatting and for asking about your saved items.',
+      'AI Assistant for chatting and asking general questions.',
+      'Optional login with private cloud sync across your devices.',
+      'Optional monthly paid plans (Pro, Ad-free, Pro + Ad-free) billed through Google Play.',
     ],
   },
   {
@@ -25,18 +27,19 @@ const SECTIONS = [
   },
   {
     h: 'Your content',
-    p: ['Everything you create in the App, such as notes, memories, goals and voice notes, belongs to you. You give the Developer no ownership of it. Please make sure you have the right to store anything you add, including photos and videos of other people.'],
+    p: ['Everything you create in the App, such as notes, memories, goals and voice notes, belongs to you, whether it is stored on your device or in your cloud space after login. You give the Developer no ownership of it, only the permission needed to store and sync it for you. Please make sure you have the right to store anything you add, including photos and videos of other people.'],
   },
   {
     h: 'Open-source software and third-party services',
     p: [
-      'The App is built with open-source software, including React, Capacitor, Lucide icons and MapLibre GL, each under its own open-source licence. The AI Assistant uses Google’s Gemini service. All third-party names, trademarks and logos belong to their respective owners, and their use does not mean endorsement.',
+      'The App is built with open-source software, including React, Capacitor, Lucide icons and MapLibre GL, each under its own open-source licence. Login, cloud storage and profile data use Google Firebase, and the AI Assistant uses Google’s Gemini service. All third-party names, trademarks and logos belong to their respective owners, and their use does not mean endorsement.',
     ],
   },
   {
     h: 'Important disclaimers',
     list: [
-      'AI answers can be wrong and are not professional advice.',
+      'AI answers can be wrong and are not professional advice. The AI Assistant does not read your saved items.',
+      'Cloud sync needs an internet connection and can be delayed; keep your own backup of important data.',
       'Life Meter figures such as heartbeats, breaths, steps, water and food are estimates from averages, not medical data.',
       'Festival dates are for general information and can vary by region and calendar.',
       'Reminders are best-effort and can be delayed by device settings.',
@@ -70,7 +73,7 @@ export default function LegalView({ currentTheme, currentLang }) {
       badgeIcon={ShieldCheck}
       badge="Intellectual Property & Services"
       badgeColor="#9333ea"
-      updated="12 October 2026"
+      updated="18 October 2026"
       sections={SECTIONS}
     />
   );

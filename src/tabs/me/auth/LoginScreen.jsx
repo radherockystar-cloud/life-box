@@ -88,13 +88,14 @@ export default function LoginScreen({ onBack, onSuccess }) {
     setInfo('');
     setBusy('google');
     try {
-      const user = await googleSignIn();
+      const user = await googleSignIn({ allowCreate: isSignUp });
       if (user) {
         onSuccess('');
         return;
       }
     } catch (err) {
-      setError(tx('alertGoogleFail') + authErrorMessage(err, tx));
+      // Account nahi mila: seedha saaf line dikhao (aage "Google login failed:" mat jodo)
+      setError(err?.code === 'lifebox/no-account' ? authErrorMessage(err, tx) : tx('alertGoogleFail') + authErrorMessage(err, tx));
     }
     setBusy('');
   };
@@ -217,7 +218,7 @@ export default function LoginScreen({ onBack, onSuccess }) {
       </div>
 
       <p style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '11px', fontWeight: 700, color: th.muted, lineHeight: 1.55, padding: '0 6px' }}>
-        <ShieldCheck size={15} color="#e11d48" style={{ flexShrink: 0, marginTop: '1px' }} /> <span>{tx('meLoginFootnote')}</span>
+        <ShieldCheck size={15} color="#e11d48" style={{ flexShrink: 0, marginTop: '1px' }} /> <span>{tx('meLoginFootnote2')}</span>
       </p>
     </div>
   );

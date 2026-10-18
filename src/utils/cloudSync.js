@@ -14,7 +14,7 @@
 //
 // Device ke apne settings (lock, passcode, theme, language, notification) cloud me nahi jaate.
 
-import { appStorage, flushAppStorage, getMeta, setMeta, delMeta } from './appStorage';
+import { appStorage, flushAppStorage, getMeta, setMeta, delMeta, registerFlushHook } from './appStorage';
 import * as mediaStore from './mediaStore';
 
 const FORMAT = 'lifebox-cloud';
@@ -305,6 +305,11 @@ export function syncNow() {
   });
 }
 
+// "Badlav hua" ka nishaan IndexedDB me pakka likha jaye, tabhi flushAppStorage() poora maana jata hai
+// (Restore ke turant baad app reload hota hai; tab bhi ye nishaan bacha rahe, warna restore kiya data cloud se overwrite ho sakta hai)
+const pendingMarks = new Set();
+registerFlushHook(() => Promise.all([...pendingMarks]));
+
 const scheduleSync = () => {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(syncNow, SYNC_DEBOUNCE_MS);
@@ -322,10 +327,15 @@ export async function startCloudSync(uid) {
   if (currentUid === uid && unsubscribeStorage) return syncNow();
   stopCloudSync();
   await flushAppStorage();
+  const eng = await getEngine(); // pehle se taiyar rakho, taaki badlav ka nishaan turant likha ja sake
   currentUid = uid;
-  unsubscribeStorage = appStorage.subscribe(async (event) => {
+  unsubscribeStorage = appStorage.subscribe((event) => {
     if (event.silent || (event.key && isLocalOnly(event.key))) return;
-    try { await (await getEngine()).markChanged(); } catch (e) { console.warn('markChanged failed', e); }
+    const p = Promise.resolve()
+      .then(() => eng.markChanged())
+      .catch((e) => console.warn('markChanged failed', e));
+    pendingMarks.add(p);
+    p.finally(() => pendingMarks.delete(p));
     scheduleSync();
   });
   if (typeof window !== 'undefined') window.addEventListener('online', onOnline);

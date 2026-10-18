@@ -6,6 +6,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   signInWithCredential,
+  getAdditionalUserInfo,
   GoogleAuthProvider,
   EmailAuthProvider,
   reauthenticateWithCredential,
@@ -75,19 +76,54 @@ export async function emailSignUp({ name, email, password }) {
   return { user, verifySent };
 }
 
+// Kuch kaam (jaise net/Storage atak jaye) kabhi khatam nahi hote. Itne time baad aage badh jao.
+const withTimeout = (promise, ms, fallback) =>
+  Promise.race([
+    Promise.resolve(promise).catch(() => fallback),
+    new Promise((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+
+// "Login" tab se Google se aisa user aaye jiska account nahi hai, to Firebase use turant naya account bana deta hai.
+// Hum use rokte hain: naya bana account hata dete hain aur "account nahi mila" batate hain.
+// Is dauran (gate on) app is naye user ko "login hua" nahi maanta.
+let loginGate = false;
+export const AUTH_RECHECK_EVENT = 'lifebox-auth-recheck';
+export const isLoginGateActive = () => loginGate;
+export const isBrandNewAccount = (u) =>
+  !!u && !!u.metadata && !!u.metadata.creationTime && u.metadata.creationTime === u.metadata.lastSignInTime;
+
 // Google login. Cancel karne par null deta hai (koi error nahi).
-export async function googleSignIn() {
+// allowCreate=false (Login tab): sirf pehle se bane account se login hoga, naya account nahi banega.
+// allowCreate=true (Sign up tab): naya account bhi ban sakta hai.
+export async function googleSignIn({ allowCreate = true } = {}) {
+  loginGate = !allowCreate;
   try {
+    let result;
     if (isNative()) {
       const credential = await nativeGoogleCredential();
-      const result = await signInWithCredential(auth, credential);
-      return result.user;
+      result = await signInWithCredential(auth, credential);
+    } else {
+      result = await signInWithPopup(auth, googleProvider);
     }
-    const result = await signInWithPopup(auth, googleProvider);
+
+    if (!allowCreate && getAdditionalUserInfo(result)?.isNewUser) {
+      try {
+        await deleteUser(result.user);
+      } catch {
+        try { await signOut(auth); } catch { /* ignore */ }
+      }
+      if (isNative()) await withTimeout(NativeGoogle.signOut(), 3000, null);
+      const e = new Error('no-account');
+      e.code = 'lifebox/no-account';
+      throw e;
+    }
     return result.user;
   } catch (error) {
     if (error?.code === 'lifebox/cancelled' || googleCancelled(error)) return null;
     throw error;
+  } finally {
+    loginGate = false;
+    try { window.dispatchEvent(new Event(AUTH_RECHECK_EVENT)); } catch { /* ignore */ }
   }
 }
 
@@ -96,18 +132,17 @@ export async function sendReset(email) {
 }
 
 // Logout: pehle baaki data cloud me bhejo. Sab pahunch gaya to is device se account ka data hata do
-// (cloud me safe hai, dobara login par aa jayega). Net na ho / upload fail ho to data device par hi rehta hai,
-// taaki kuch kho na jaye (agla login usi account se ho to wahi se aage chalega).
+// (cloud me safe hai, dobara login par aa jayega). Net na ho / upload fail ho / bahut der lage to data device par hi rehta hai,
+// taaki kuch kho na jaye. Koi bhi step 6-8 second se zyada nahi rukta, isliye logout kabhi atakta nahi.
 export async function logOut() {
   const uid = auth.currentUser && auth.currentUser.uid;
   let allSynced = false;
-  if (uid) allSynced = await syncBeforeLogout(uid);
+  if (uid) allSynced = (await withTimeout(syncBeforeLogout(uid), 6000, false)) === true;
   await signOut(auth);
-  if (isNative()) {
-    try { await NativeGoogle.signOut(); } catch { /* plugin na ho to koi baat nahi */ }
-  }
+  if (isNative()) await withTimeout(NativeGoogle.signOut(), 3000, null);
   if (allSynced) {
-    try { await wipeLocalAfterLogout(); } catch (e) { console.warn('Local data clear failed after logout', e); }
+    const wiped = await withTimeout(wipeLocalAfterLogout().then(() => true), 8000, false);
+    if (!wiped) console.warn('Local data clear did not finish after logout');
   }
   return { wiped: allSynced };
 }
@@ -176,8 +211,12 @@ export function authErrorMessage(error, tx) {
     case 'auth/admin-restricted-operation':
     case 'auth/configuration-not-found':
       return tx('errNotEnabled');
-    case 'lifebox/google-not-ready':
-      return tx('errGoogleSetup');
+    case 'lifebox/google-not-ready': {
+      const why = String(error?.cause?.message || '').replace(/\s+/g, ' ').trim().slice(0, 90);
+      return tx('errGoogleSetup') + (why ? ` (${why})` : '');
+    }
+    case 'lifebox/no-account':
+      return tx('errNoGoogleAccount');
     case 'lifebox/password-needed':
       return tx('errPasswordNeeded');
     default:

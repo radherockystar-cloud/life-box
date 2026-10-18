@@ -21,8 +21,28 @@ const SECTIONS = [
   {
     h: 'Your content and your responsibility',
     p: [
-      'You own the notes, memories, goals, voice notes, plans and other content you create in the App. This content is stored on your device and not on our servers, so you are responsible for keeping your device safe and for making your own backups of anything important.',
-      'If you uninstall the App, clear its data or lose your device, your content may be lost permanently and we will not be able to restore it.',
+      'You own the notes, memories, goals, voice notes, plans and other content you create in the App. In guest mode this content is stored only on your device. If you log in, it is also saved to your private cloud space (Google Firebase), as explained in the Privacy Policy.',
+      'You are responsible for keeping your device and your login details safe, and for making your own backups (Backup / Export) of anything important. If you use the App as a guest and then uninstall it, clear its data or lose your device, your content may be lost permanently. Even with login, cloud sync depends on third-party services and an internet connection, so we cannot promise that data will never be lost or delayed.',
+      'You are responsible for the content you store. Please do not store unlawful content or content you have no right to keep.',
+    ],
+  },
+  {
+    h: 'Account and cloud sync',
+    p: [
+      'Creating an account is optional. If you log in, you must give correct information and keep your password secure. You are responsible for activity on your account.',
+      'After login, the App syncs your content to a private cloud space and keeps a copy on your device for offline use. Logging out uploads pending changes and then removes your account’s content from the device. You can delete your account from the App, which also deletes your cloud content. Deleted cloud content may not be recoverable.',
+      'Cloud storage may have limits, may change, or may be unavailable at times. We may change or stop the sync feature, and we will try to give notice where practical.',
+    ],
+  },
+  {
+    h: 'Subscriptions and payments',
+    p: [
+      'Life Box is free to use with limits: free users can send a limited number of AI Assistant messages, and the Memories tab and continued AI chat need a paid plan. The Pro plan includes a monthly AI usage allowance (it depends on how long your messages and the replies are); when it is used up, the AI Assistant pauses until the 1st of the next month. We may adjust the allowance from time to time. Optional monthly plans are offered (for example Pro, Ad-free and Pro + Ad-free). The price, taxes and features of each plan are shown in the App and in Google Play before you subscribe.',
+      'Payments are handled entirely by Google Play. Your plan renews automatically every month until you cancel it in Google Play > Payments & subscriptions > Subscriptions. Cancelling stops future charges, and you keep the plan until the end of the period you already paid for. Uninstalling the App does not cancel a subscription.',
+      'Refunds are handled by Google Play under its own policy and applicable law; we cannot refund payments ourselves. If a price changes, Google Play will tell you before it applies to you.',
+      'If your plan ends or payment fails, paid features lock again, but your saved notes, memories and other data are not deleted. You can restore a purchase from Me > Manage Subscription > Restore purchases, on the same Google account.',
+      'We may change plans, prices, free limits or features in future. We will not charge you for anything without showing the price in Google Play first.',
+      'Ads. On the free plan the App may show ads. You must not click ads artificially or try to block or manipulate them. Ad-free plans remove ads.',
     ],
   },
   {
@@ -39,7 +59,7 @@ const SECTIONS = [
     h: 'AI Assistant',
     p: [
       'The AI Assistant is powered by a third-party AI service (Google Gemini). Its answers are generated automatically and can be incomplete, outdated or wrong. They are for general information and convenience only and are not professional medical, legal, financial or other expert advice. Please check important information yourself.',
-      'Messages and related saved content may be sent to the AI service as explained in the Privacy Policy. Please do not share passwords, bank details or other highly sensitive information in the chat.',
+      'Messages you type in the chat, and photos you attach there, are sent to the AI service as explained in the Privacy Policy. The AI Assistant does not read your saved notes, memories, goals, voice notes or planner entries. Please do not share passwords, bank details or other highly sensitive information in the chat.',
     ],
   },
   {
@@ -56,7 +76,7 @@ const SECTIONS = [
   },
   {
     h: 'Third-party services',
-    p: ['The App may use or link to third-party services such as Google (AI Assistant), a feedback email service, and external websites like Instagram. We do not control these services and are not responsible for their content, availability or policies.'],
+    p: ['The App may use or link to third-party services such as Google (Firebase login, cloud storage and profile data, and the AI Assistant), a feedback email service, and external websites like Instagram. We do not control these services and are not responsible for their content, availability or policies.'],
   },
   {
     h: 'Availability and updates',
@@ -68,11 +88,11 @@ const SECTIONS = [
   },
   {
     h: 'Limitation of liability',
-    p: ['To the fullest extent permitted by law, the Developer will not be liable for any indirect, incidental, special or consequential loss, including loss of data, missed reminders or loss of profit, arising from the use of or inability to use the App. Nothing in these Terms limits any rights you have under mandatory consumer-protection laws that cannot be excluded.'],
+    p: ['To the fullest extent permitted by law, the Developer will not be liable for any indirect, incidental, special or consequential loss, including loss of data (on your device or in the cloud), missed reminders or loss of profit, arising from the use of or inability to use the App. Nothing in these Terms limits any rights you have under mandatory consumer-protection laws that cannot be excluded.'],
   },
   {
     h: 'Termination',
-    p: ['You may stop using the App at any time by uninstalling it. We may suspend or end your access if you seriously or repeatedly breach these Terms.'],
+    p: ['You may stop using the App at any time. Delete your account from the App first if you want your cloud content removed; uninstalling alone does not delete it. We may suspend or end your access if you seriously or repeatedly breach these Terms.'],
   },
   {
     h: 'Governing law',
@@ -100,7 +120,7 @@ export default function TermsView({ currentTheme, currentLang }) {
       badgeIcon={AlertCircle}
       badge="User Guidelines & Agreement"
       badgeColor="#d97706"
-      updated="12 October 2026"
+      updated="18 October 2026"
       intro="Please read these Terms & Conditions carefully before using Life Box. They set out the rules for using the App."
       sections={SECTIONS}
     />
