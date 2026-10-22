@@ -19,6 +19,7 @@ import {
   AI_PRICES,
   AI_PRICE_DEFAULT,
 } from '../config/plans';
+import { bt, billLoc } from './billingTexts';
 
 const NativePurchases = registerPlugin('NativePurchases');
 const isNative = () => Capacitor.isNativePlatform();
@@ -79,7 +80,7 @@ let busy = false;
 
 const nextResetText = () => {
   const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth() + 1, 1).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  return new Date(d.getFullYear(), d.getMonth() + 1, 1).toLocaleDateString(billLoc(), { day: 'numeric', month: 'short' });
 };
 
 const compute = () => {
@@ -95,10 +96,10 @@ const compute = () => {
   const aiBlocked = pro ? budget.spent >= AI_BUDGET_INR : aiLeft <= 0;
   let aiBanner = '';
   if (pro) {
-    if (aiBlocked) aiBanner = `This month's AI allowance is used up. It comes back on ${nextResetText()}.`;
-    else if (aiPctLeft <= 30) aiBanner = `AI allowance left this month: ${aiPctLeft}%`;
+    if (aiBlocked) aiBanner = bt('bannerUsed', { d: nextResetText() });
+    else if (aiPctLeft <= 30) aiBanner = bt('bannerLeft', { p: aiPctLeft });
   } else {
-    aiBanner = aiBlocked ? 'Free messages are finished. Get Pro to keep chatting.' : `Free messages left: ${aiLeft} of ${FREE_AI_MESSAGES}`;
+    aiBanner = aiBlocked ? bt('bannerFreeDone') : bt('bannerFreeLeft', { a: aiLeft, b: FREE_AI_MESSAGES });
   }
   return {
     pro,
@@ -182,16 +183,16 @@ export async function loadProducts() {
 const friendly = (e) => {
   const msg = String((e && (e.message || e.errorMessage)) || e || '');
   if (/cancel/i.test(msg) || (e && e.code === 'USER_CANCELLED')) return null; // user ne khud band kiya
-  if (/not.?found|unavailable|not available|item|sku|product/i.test(msg)) return 'This plan is not available in Google Play yet. Please try again later.';
-  if (/network|internet|timeout|offline/i.test(msg)) return 'No internet connection. Please check and try again.';
-  if (/unimplemented|not implemented/i.test(msg)) return 'Purchases are not available in this build.';
-  return 'The purchase could not be completed. You were not charged. Please try again.';
+  if (/not.?found|unavailable|not available|item|sku|product/i.test(msg)) return bt('errNotAvail');
+  if (/network|internet|timeout|offline/i.test(msg)) return bt('errNet');
+  if (/unimplemented|not implemented/i.test(msg)) return bt('errUnimpl');
+  return bt('errFail');
 };
 
 export async function purchasePlan(planId) {
   const plan = PLANS.find((p) => p.id === planId);
-  if (!plan) return { ok: false, error: 'Unknown plan.' };
-  if (!isNative()) return { ok: false, error: 'Purchases work only in the installed Android app.' };
+  if (!plan) return { ok: false, error: bt('errUnknown') };
+  if (!isNative()) return { ok: false, error: bt('errWebBuy') };
   if (busy) return { ok: false, error: '' };
   busy = true;
   emit();
@@ -215,7 +216,7 @@ export async function purchasePlan(planId) {
 }
 
 export async function restorePurchases() {
-  if (!isNative()) return { ok: false, error: 'Restore works only in the installed Android app.' };
+  if (!isNative()) return { ok: false, error: bt('errWebRestore') };
   try {
     try {
       await NativePurchases.restorePurchases();
@@ -225,7 +226,7 @@ export async function restorePurchases() {
     await refreshEntitlements();
     return { ok: true, active: state.pro || state.adFree };
   } catch {
-    return { ok: false, error: 'Could not restore. Please try again.' };
+    return { ok: false, error: bt('errRestoreFail') };
   }
 }
 
@@ -294,6 +295,17 @@ export function initBilling() {
   loadProducts();
   const again = () => refreshEntitlements();
   window.addEventListener('online', again);
+  // Bhasha badle to AI banner wagairah naye shabdon me dikhe
+  window.addEventListener('newlife-lang-changed', () => emit());
+  // Plan khatam hote hi Pro dobara lock ho: Play se har 30 minute me poochho (app khula ho tab),
+  // aur har minute dekho ki grace samay khatam to nahi hua (sirf badalne par hi screen refresh hoti hai).
+  setInterval(() => {
+    if (typeof document === 'undefined' || !document.hidden) refreshEntitlements();
+  }, 30 * 60 * 1000);
+  setInterval(() => {
+    const n = compute();
+    if (n.pro !== state.pro || n.adFree !== state.adFree) emit();
+  }, 60 * 1000);
   if (isNative()) {
     CapApp.addListener('appStateChange', (s) => {
       if (s.isActive) again();

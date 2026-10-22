@@ -2,11 +2,14 @@ import React from 'react';
 import { Crown, Lock, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { openPlans } from '../utils/billing';
+import { bt } from '../utils/billingTexts';
 
 // Free user ko Memories tab ki jagah ye card dikhta hai.
-export default function ProLock({ title = 'Memories is a Pro feature', lines = [] }) {
-  const { c } = useApp();
-  const items = lines.length ? lines : ['Keep photos, videos and stories of your special moments', 'Your saved memories are safe and open as soon as you subscribe'];
+export default function ProLock({ title, lines = [] }) {
+  const { c, currentLang } = useApp();
+  const b = (k) => bt(k, null, currentLang);
+  const items = lines.length ? lines : [b('lockL1'), b('lockL2')];
+  const heading = title || b('lockTitle');
   return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div
@@ -28,7 +31,7 @@ export default function ProLock({ title = 'Memories is a Pro feature', lines = [
             <Lock size={14} />
           </div>
         </div>
-        <h3 style={{ fontSize: '18px', fontWeight: 900, color: c.isDark ? c.text : '#92400e' }}>{title}</h3>
+        <h3 style={{ fontSize: '18px', fontWeight: 900, color: c.isDark ? c.text : '#92400e' }}>{heading}</h3>
         <ul style={{ listStyle: 'none', padding: 0, margin: '12px 0 18px', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left' }}>
           {items.map((l) => (
             <li key={l} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '12.5px', fontWeight: 700, lineHeight: 1.5, color: c.isDark ? c.textSub : '#92400e' }}>
@@ -42,7 +45,7 @@ export default function ProLock({ title = 'Memories is a Pro feature', lines = [
           onClick={openPlans}
           style={{ width: '100%', padding: '13px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '14px', fontWeight: 900, color: '#ffffff', background: 'linear-gradient(160deg, #fb7185 0%, #e11d48 55%, #be123c 100%)', boxShadow: 'inset 0 1.5px 0 rgba(255,255,255,0.65), 0 8px 18px -4px rgba(225,29,72,0.65)' }}
         >
-          See plans
+          {b('seePlans')}
         </button>
       </div>
     </div>

@@ -5,12 +5,14 @@ import { useMeTheme } from '../meTheme';
 import { useMeText } from '../meTexts';
 import { useBackHandler } from '../../../utils/useBackHandler';
 import { ADS_ENABLED, visiblePlans } from '../../../config/plans';
+import { bt } from '../../../utils/billingTexts';
 import { useEntitlements, purchasePlan, restorePurchases, manageSubscriptions, testGrant, testClear } from '../../../utils/billing';
 
 // Subscription page. Poori screen par khulta hai (neeche ke 4 tab nahi dikhte).
 // Plans / prices badalne ho to: src/config/plans.js
 export default function SubscriptionScreen({ onBack }) {
-  const { c } = useApp();
+  const { c, currentLang } = useApp();
+  const b = (k, v) => bt(k, v, currentLang);
   const th = useMeTheme();
   const tx = useMeText();
   const ent = useEntitlements();
@@ -33,18 +35,18 @@ export default function SubscriptionScreen({ onBack }) {
   const buy = async (plan) => {
     setMsg({ text: '', good: false });
     const r = await purchasePlan(plan.id);
-    if (r.ok) setMsg({ text: 'Thank you! Your plan is active now. 🎉', good: true });
+    if (r.ok) setMsg({ text: b('thankYou'), good: true });
     else if (r.error) setMsg({ text: r.error, good: false });
   };
 
   const restore = async () => {
     setMsg({ text: '', good: false });
     const r = await restorePurchases();
-    if (r.ok) setMsg({ text: r.active ? 'Your plan was restored. ✅' : 'No active subscription found on this Google account.', good: Boolean(r.active) });
+    if (r.ok) setMsg({ text: r.active ? b('restoredOk') : b('restoredNone'), good: Boolean(r.active) });
     else setMsg({ text: r.error || '', good: false });
   };
 
-  const activeNames = [ent.pro && 'Pro', ent.adFree && 'Ad-free'].filter(Boolean).join(' + ');
+  const activeNames = [ent.pro && 'Pro', ent.adFree && b('Ad-free')].filter(Boolean).join(' + ');
 
   const card = {
     borderRadius: '24px',
@@ -73,7 +75,7 @@ export default function SubscriptionScreen({ onBack }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-        <button type="button" onClick={onBack} style={th.iconBtn} aria-label="Back" className="me-press">
+        <button type="button" onClick={onBack} style={th.iconBtn} aria-label={b('back')} className="me-press">
           <ArrowLeft size={20} />
         </button>
         <h2 style={{ fontSize: '18px', fontWeight: 900, color: th.ink }}>{tx('meSubTitle')}</h2>
@@ -88,17 +90,17 @@ export default function SubscriptionScreen({ onBack }) {
         </div>
         {hasAny ? (
           <>
-            <h3 style={{ fontSize: '17px', fontWeight: 900, color: dark ? c.text : '#92400e' }}>You are on {activeNames} ✅</h3>
-            <p style={{ fontSize: '12px', fontWeight: 700, marginTop: '4px', color: dark ? c.textSub : '#92400e' }}>Thank you for supporting Life Box.</p>
+            <h3 style={{ fontSize: '17px', fontWeight: 900, color: dark ? c.text : '#92400e' }}>{b('youAre', { n: activeNames })}</h3>
+            <p style={{ fontSize: '12px', fontWeight: 700, marginTop: '4px', color: dark ? c.textSub : '#92400e' }}>{b('thanks')}</p>
             <button type="button" onClick={manageSubscriptions} style={{ marginTop: '12px', padding: '10px 18px', borderRadius: '14px', border: '1px solid rgba(217,119,6,0.5)', background: 'transparent', color: dark ? c.text : '#92400e', fontWeight: 900, fontSize: '12.5px', cursor: 'pointer' }}>
-              Manage or cancel in Google Play
+              {b('manageCancel')}
             </button>
           </>
         ) : (
           <>
-            <h3 style={{ fontSize: '17px', fontWeight: 900, color: dark ? c.text : '#92400e' }}>Unlock Life Box Pro</h3>
+            <h3 style={{ fontSize: '17px', fontWeight: 900, color: dark ? c.text : '#92400e' }}>{b('unlock')}</h3>
             <p style={{ fontSize: '12px', fontWeight: 700, marginTop: '4px', lineHeight: 1.55, color: dark ? c.textSub : '#92400e' }}>
-              {ent.aiLeft > 0 ? `You have ${ent.aiLeft} of ${ent.aiLimit} free AI messages left.` : 'Your free AI messages are finished.'} Subscribe for the AI chat (with a generous monthly allowance) and the Memories tab.
+              {ent.aiLeft > 0 ? b('left', { a: ent.aiLeft, b: ent.aiLimit }) : b('finished')} {b('pitch')}
             </p>
           </>
         )}
@@ -111,34 +113,34 @@ export default function SubscriptionScreen({ onBack }) {
           const blk = blocked(plan);
           const soon = plan.needsAds && !ADS_ENABLED; // ads abhi nahi hain, to ye plan abhi bechna sahi nahi
           const disabled = soon || own || blk || ent.busy || !ent.canBuy;
-          let label = 'Subscribe';
-          if (soon) label = 'Coming soon';
-          else if (own) label = 'Active ✓';
-          else if (blk) label = 'Cancel current plan first';
-          else if (ent.busy) label = 'Please wait…';
-          else if (!ent.canBuy) label = 'Available in the app';
+          let label = b('subscribe');
+          if (soon) label = b('soon');
+          else if (own) label = b('active');
+          else if (blk) label = b('cancelFirst');
+          else if (ent.busy) label = b('wait');
+          else if (!ent.canBuy) label = b('inApp');
           return (
             <div key={plan.id} style={{ ...card, position: 'relative', border: plan.badge ? '1.5px solid #e11d48' : card.border, opacity: soon ? 0.8 : 1 }}>
               {plan.badge && (
                 <div style={{ position: 'absolute', top: '-10px', right: '16px', padding: '3px 10px', borderRadius: '10px', background: 'linear-gradient(160deg, #fb7185, #be123c)', color: '#fff', fontSize: '10px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Sparkles size={11} /> {plan.badge}
+                  <Sparkles size={11} /> {b(plan.badge)}
                 </div>
               )}
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px' }}>
                 <div>
-                  <div style={{ fontSize: '16px', fontWeight: 900, color: ink }}>{plan.title}</div>
-                  <div style={{ fontSize: '11.5px', fontWeight: 700, color: sub }}>{plan.tagline}</div>
+                  <div style={{ fontSize: '16px', fontWeight: 900, color: ink }}>{b(plan.title)}</div>
+                  <div style={{ fontSize: '11.5px', fontWeight: 700, color: sub }}>{b(plan.tagline)}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span style={{ fontSize: '20px', fontWeight: 900, color: '#be123c' }}>{priceOf(plan)}</span>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: sub }}> / month</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: sub }}> {b('perMonth')}</span>
                 </div>
               </div>
               <ul style={{ listStyle: 'none', padding: 0, margin: '12px 0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {plan.features.map((f) => (
                   <li key={f} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '12.5px', fontWeight: 700, color: ink }}>
                     <Check size={15} style={{ flexShrink: 0, marginTop: '2px', color: '#059669' }} />
-                    {f}
+                    {b(f)}
                   </li>
                 ))}
               </ul>
@@ -174,15 +176,15 @@ export default function SubscriptionScreen({ onBack }) {
 
       <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
         <button type="button" onClick={restore} style={{ padding: '9px 16px', borderRadius: '14px', border: '1px solid rgba(251,113,133,0.4)', background: 'transparent', color: ink, fontWeight: 800, fontSize: '12px', cursor: 'pointer' }}>
-          Restore purchases
+          {b('restore')}
         </button>
         <button type="button" onClick={manageSubscriptions} style={{ padding: '9px 16px', borderRadius: '14px', border: '1px solid rgba(251,113,133,0.4)', background: 'transparent', color: ink, fontWeight: 800, fontSize: '12px', cursor: 'pointer' }}>
-          Manage in Google Play
+          {b('manageGP')}
         </button>
       </div>
 
       <p style={{ marginTop: '16px', fontSize: '10.5px', fontWeight: 600, lineHeight: 1.6, textAlign: 'center', color: sub }}>
-        Prices are per month and include taxes where applicable. Payment is charged to your Google Play account and the plan renews automatically every month until you cancel it in Google Play → Payments &amp; subscriptions → Subscriptions. If a plan ends, your saved data is never deleted; the paid features simply lock again. See Terms &amp; Conditions for details.
+        {b('fine')}
       </p>
 
       {ent.testMode && (
