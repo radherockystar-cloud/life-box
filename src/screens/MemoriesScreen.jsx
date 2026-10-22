@@ -11,10 +11,14 @@ import {
 import MemoriesHome from "./memories/MemoriesHome";
 import MemoryCreateForm from "./memories/MemoryCreateForm";
 import MemoryBookViewer from "./memories/MemoryBookViewer";
+import { clampCaption, slideCountOf } from "./memories/captionUtils";
+import { downloadBookPdf } from "./memories/bookPdf";
+import { useScreenT } from "../utils/screenTexts";
 
 export default function MemoriesScreen() {
   // Language (t) poore app wale context se
-  const { t } = useApp();
+  const { t, c } = useApp();
+  const { st } = useScreenT();
 
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -27,10 +31,16 @@ export default function MemoriesScreen() {
 
   const [memoryTitle, setMemoryTitle] = useState("");
   const [memoryTag, setMemoryTag] = useState("Memory");
+  // Book ke page par text kis style me likha jayega
+  const [textStyle, setTextStyle] = useState("classic");
+  // Kitaab ke cover ka rang (white / black / red / purple / pink)
+  const [coverColor, setCoverColor] = useState("purple");
 
   const [pages, setPages] = useState([]);
 
   const [currentPage, setCurrentPage] = useState(0);
+  // PDF ban rahi hai to { done, total }, warna null
+  const [pdfBusy, setPdfBusy] = useState(null);
   const [turnDirection, setTurnDirection] = useState("next");
   const [isTurning, setIsTurning] = useState(false);
 
@@ -98,7 +108,28 @@ export default function MemoriesScreen() {
         page.id === id
           ? {
               ...page,
-              description,
+              // Har photo ke text ki limit (taaki book ka page kharab na dikhe)
+              description: clampCaption(description),
+            }
+          : page
+      )
+    );
+  };
+
+  // --------------------------------
+  // CROP PHOTO
+  // --------------------------------
+
+  // Crop ki hui photo page me lagti hai; asli (original) photo form me hi rakhi rehti hai
+  // taaki dobara crop karne par poori photo mile. Save karte waqt original hata di jaati hai.
+  const cropPhoto = (id, image, orig) => {
+    setPages((oldPages) =>
+      oldPages.map((page) =>
+        page.id === id
+          ? {
+              ...page,
+              image,
+              orig: page.orig || orig || page.image,
             }
           : page
       )
@@ -120,6 +151,8 @@ export default function MemoriesScreen() {
   const resetCreateForm = () => {
     setMemoryTitle("");
     setMemoryTag("Memory");
+    setTextStyle("classic");
+    setCoverColor("purple");
     setPages([]);
     setShowCreate(false);
   };
@@ -156,8 +189,13 @@ export default function MemoriesScreen() {
 
       createdAt: Date.now(),
 
-      pages: pages.map((page) => ({
+      textStyle,
+      coverColor,
+
+      // `orig` (crop se pehle ki photo) sirf form me kaam aati hai, save nahi hoti
+      pages: pages.map(({ orig, ...page }) => ({
         ...page,
+        description: clampCaption(page.description),
       })),
     };
 
@@ -200,7 +238,7 @@ export default function MemoriesScreen() {
   const changePage = (direction) => {
     if (!selectedMemory || isTurning) return;
 
-    const totalSlides = selectedMemory.pages.length + 1; // +1 for cover
+    const totalSlides = slideCountOf(selectedMemory, true); // cover + jodiyan (dono page saath)
 
     if (direction === "next") {
       if (currentPage >= totalSlides - 1) return;
@@ -211,7 +249,7 @@ export default function MemoriesScreen() {
       setTimeout(() => {
         setCurrentPage((page) => page + 1);
         setIsTurning(false);
-      }, 520);
+      }, 600);
     }
 
     if (direction === "prev") {
@@ -223,7 +261,29 @@ export default function MemoriesScreen() {
       setTimeout(() => {
         setCurrentPage((page) => page - 1);
         setIsTurning(false);
-      }, 520);
+      }, 600);
+    }
+  };
+
+  // --------------------------------
+  // DOWNLOAD BOOK AS PDF
+  // --------------------------------
+
+  const downloadMemory = async (memory) => {
+    if (pdfBusy || !memory) return;
+    setPdfBusy({ done: 0, total: slideCountOf(memory, true) });
+    try {
+      const res = await downloadBookPdf(memory, {
+        t,
+        isDark: !!(c && c.isDark),
+        onProgress: (done, total) => setPdfBusy({ done, total }),
+      });
+      setPdfBusy(null);
+      if (res.mode === "saved") alert(st("pdfSaved", { path: res.path }));
+    } catch (error) {
+      console.error("PDF error", error);
+      setPdfBusy(null);
+      alert(st("pdfFail"));
     }
   };
 
@@ -322,6 +382,18 @@ export default function MemoriesScreen() {
   useBackHandler(showCreate, handleCloseCreate);
   useBackHandler(showBook, closeBook);
 
+  const pdfOverlay = pdfBusy ? (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/45 px-8">
+      <div className="rounded-3xl px-6 py-5 text-center max-w-[280px] shadow-2xl" style={{ background: c && c.isDark ? "#1e293b" : "#ffffff" }}>
+        <div className="mx-auto mb-3 w-9 h-9 rounded-full border-4 border-rose-200 border-t-rose-500 animate-spin" />
+        <p className="font-black text-sm" style={{ color: c && c.isDark ? "#f9fafb" : "#6f2f4b" }}>{st("pdfMaking")}</p>
+        <p className="text-[11px] font-semibold mt-1" style={{ color: c && c.isDark ? "#fda4af" : "#b0587a" }}>
+          {st("pdfPleaseWait")} ({pdfBusy.done}/{pdfBusy.total})
+        </p>
+      </div>
+    </div>
+  ) : null;
+
   // ==========================================
   // CREATE MEMORY SCREEN
   // ==========================================
@@ -333,9 +405,14 @@ export default function MemoriesScreen() {
         setMemoryTitle={setMemoryTitle}
         memoryTag={memoryTag}
         setMemoryTag={setMemoryTag}
+        textStyle={textStyle}
+        setTextStyle={setTextStyle}
+        coverColor={coverColor}
+        setCoverColor={setCoverColor}
         pages={pages}
         handlePhotoUpload={handlePhotoUpload}
         updateDescription={updateDescription}
+        cropPhoto={cropPhoto}
         removePhoto={removePhoto}
         saveMemory={saveMemory}
         onClose={handleCloseCreate}
@@ -349,6 +426,7 @@ export default function MemoriesScreen() {
 
   if (showBook && selectedMemory) {
     return (
+      <>
       <MemoryBookViewer
         selectedMemory={selectedMemory}
         currentPage={currentPage}
@@ -358,7 +436,11 @@ export default function MemoriesScreen() {
         handleTouchStart={handleTouchStart}
         handleTouchEnd={handleTouchEnd}
         handleBookTap={handleBookTap}
+        onDownload={downloadMemory}
+        downloading={!!pdfBusy}
       />
+      {pdfOverlay}
+      </>
     );
   }
 
@@ -367,13 +449,18 @@ export default function MemoriesScreen() {
   // ==========================================
 
   return (
+    <>
     <MemoriesHome
       filteredMemories={filteredMemories}
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
       openMemory={openMemory}
       deleteMemory={deleteMemory}
+      downloadMemory={downloadMemory}
+      downloading={!!pdfBusy}
       setShowCreate={setShowCreate}
     />
+    {pdfOverlay}
+    </>
   );
 }

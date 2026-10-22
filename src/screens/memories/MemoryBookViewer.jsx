@@ -1,11 +1,109 @@
 import React from "react";
-import { X } from "lucide-react";
+import { X, Download } from "lucide-react";
 import BookStyles from "./BookStyles";
+import { coverDecorInner, coverVars, getCoverTheme } from "./bookArt";
 import { MEMORIES_CSS } from "./memoriesTheme";
 import { MEMORIES_DARK_CSS } from "./memoriesDark";
 import { useApp } from "../../context/AppContext";
+import { useScreenT } from "../../utils/screenTexts";
+import {
+  LAYOUT,
+  PAGE_ASPECT,
+  buildSeq,
+  captionSize,
+  slideCountOf,
+  splitCaption,
+  textStyleVars,
+  titleSize,
+} from "./captionUtils";
 
-// Full-screen photo book (cover + pages, swipe / tap to turn).
+// Band kitaab ka cover: jamuni linen, sone ki chhapai. Isme koi photo nahi.
+function BookCover({ memory, t }) {
+  const decor = { __html: coverDecorInner("bkg", getCoverTheme(memory.coverColor)) };
+  return (
+    <div className="bk-cover">
+      <svg className="bk-decor" viewBox="0 0 100 138.89" preserveAspectRatio="none" aria-hidden="true" dangerouslySetInnerHTML={decor} />
+      <p className="cover-tag cover-gold">{memory.tag}</p>
+      <div className="cover-titlebox">
+        <h1 className="cover-title cover-gold" style={{ fontSize: `${titleSize(memory.title) * 0.82}cqw` }}>
+          {memory.title}
+        </h1>
+      </div>
+      <p className="cover-sub cover-gold">{t.memCoverSub}</p>
+      <p className="cover-date cover-gold">{memory.date}</p>
+    </div>
+  );
+}
+
+// Ek panna (kagaz). side: 'single' | 'L' | 'R'
+function BookPage({ item, side, total, memory, t }) {
+  if (!item) return <div className={`bk-page ${side}`} />;
+  if (item.type === "cover") return <BookCover memory={memory} t={t} />;
+
+  if (item.type === "dedic") {
+    return (
+      <div className={`bk-page ${side}`} style={{ "--ded-size": titleSize(memory.title) * 0.95 }}>
+        <div className="bk-center">
+          <div className="bk-orn">✦</div>
+          <div className="bk-ded-sub">{memory.tag}</div>
+          <div className="bk-line" />
+          <div className="bk-ded-title">{memory.title}</div>
+          <div className="bk-line" />
+          <div className="bk-ded-sub">{t.memCoverSub}</div>
+          <div className="bk-ded-date">{memory.date}</div>
+          <div className="bk-orn" style={{ marginTop: "4cqw" }}>❦</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (item.type === "end") {
+    return (
+      <div className={`bk-page ${side}`}>
+        <div className="bk-center">
+          <div className="bk-orn">♥</div>
+          <div className="bk-line" />
+          <div className="bk-ded-title" style={{ "--ded-size": 7 }}>{memory.title}</div>
+          <div className="bk-ded-sub">· · ·</div>
+        </div>
+      </div>
+    );
+  }
+
+  const { page, n } = item;
+  const caption = splitCaption(page.description);
+  return (
+    <div className={`bk-page ${side}`} style={{ "--cap-size": captionSize(page.description) }}>
+      <div className="bk-body">
+        <div className="bk-spacer" style={{ height: `${LAYOUT.padTop}%` }} />
+
+        {/* TEXT UPAR (photo se pehle) */}
+        <div className="bk-zone" style={{ height: `${LAYOUT.top}%` }}>
+          {caption.top && <p className="page-caption">{caption.top}</p>}
+        </div>
+
+        {/* PHOTO - poore frame me bhari hui */}
+        <div className="bk-frame" style={{ height: `${LAYOUT.frame}%` }}>
+          <img src={page.image} alt="" draggable="false" />
+        </div>
+
+        {/* TEXT NICHE (photo ke baad) */}
+        <div className="bk-zone" style={{ height: `${LAYOUT.bottom}%` }}>
+          {caption.bottom && <p className="page-caption">{caption.bottom}</p>}
+        </div>
+
+        {/* PAGE NUMBER */}
+        <div className="bk-num" style={{ height: `${LAYOUT.num}%` }}>
+          {n} / {total}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Full-screen photo book: band cover, swipe karte hi asli kitaab ki tarah khulta hai, dono taraf page.
+const COVER_ITEM = { type: "cover" };
+
 export default function MemoryBookViewer({
   selectedMemory,
   currentPage,
@@ -15,236 +113,177 @@ export default function MemoryBookViewer({
   handleTouchStart,
   handleTouchEnd,
   handleBookTap,
+  onDownload,
+  downloading = false,
 }) {
-    // Language (t) poore app wale context se
-    const { t } = useApp();
-    const totalSlides = selectedMemory.pages.length + 1; // cover + photos
-    const isCoverPage = currentPage === 0;
-    const contentPage = !isCoverPage
-      ? selectedMemory.pages[currentPage - 1]
-      : null;
-    const coverImage = selectedMemory.pages[0]?.image;
+  // Language (t) poore app wale context se
+  const { t } = useApp();
+  const { st } = useScreenT();
+
+  const N = selectedMemory.pages.length;
+  const totalSlides = slideCountOf(selectedMemory, true);
+  const spreadsCount = totalSlides - 1;
+  const styleVars = { ...textStyleVars(selectedMemory.textStyle), ...coverVars(selectedMemory.coverColor) };
+  const seq = buildSeq(selectedMemory);
+  const pairOf = (s) => [seq[2 * (s - 1)], seq[2 * (s - 1) + 1]];
+
+  const turningNext = isTurning && turnDirection === "next";
+  const turningPrev = isTurning && turnDirection === "prev";
+
+  // Kitaab band dikhe ya khuli? (palatne ki shuruaat se hi badal jaata hai, taaki animation saath chale)
+  const closedBook = (currentPage === 0 && !turningNext) || (currentPage === 1 && turningPrev);
+
+  // Kitaab kitni khuli hai (left ke panno ka dher usi hisaab se moti/patli)
+  const progress = currentPage <= 1 ? 0 : (currentPage - 1) / Math.max(1, spreadsCount - 1);
+  const leftEdge = 3 + 10 * progress;
+
+  const spreadMax = "min(98vw, 940px, calc((100vh - 122px) * 1.44 + 28px))";
+
+  // ----- Abhi kaun sa panna kahan -----
+  const [curL, curR] = pairOf(Math.max(1, currentPage));
+  let baseL = curL;
+  let baseR = curR;
+  let leaf = null; // { dir, front, back, still }
+
+  if (currentPage === 0) {
+    // band kitaab: cover upar, neeche pehla jod; palatne par cover khulta hai
+    baseL = null;
+    baseR = turningNext ? curR : null;
+    leaf = { dir: "next", front: COVER_ITEM, back: curL, still: !turningNext };
+  } else if (turningNext && currentPage < spreadsCount) {
+    const [nextL, nextR] = pairOf(currentPage + 1);
+    baseR = nextR;
+    leaf = { dir: "next", front: curR, back: nextL };
+  } else if (turningPrev && currentPage > 1) {
+    const [prevL, prevR] = pairOf(currentPage - 1);
+    baseL = prevL;
+    leaf = { dir: "prev", front: curL, back: prevR };
+  } else if (turningPrev && currentPage === 1) {
+    // cover band hota hai: pehla page palatkar cover ban jaata hai
+    baseL = null;
+    leaf = { dir: "prev", front: curL, back: COVER_ITEM };
+  }
+
+  const faceClass = (item, back) => `bk-face${back ? " back" : ""}${item && item.type === "cover" ? " cv" : ""}`;
 
   return (
-      <div
-        className="mm-desk fixed inset-0 z-[100] flex flex-col overflow-hidden"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
-        <style>{`${MEMORIES_CSS}
+    <div
+      className="mm-desk fixed inset-0 z-[100] flex flex-col overflow-hidden"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      <style>{`${MEMORIES_CSS}
 ${MEMORIES_DARK_CSS}`}</style>
 
-        {/* BOOK HEADER */}
+      {/* BOOK HEADER */}
 
-        <div className="h-14 shrink-0 flex items-center px-4 gap-3 absolute top-0 left-0 right-0 z-30">
-          <button
-            onClick={closeBook}
-            className="mm-icon w-11 h-11 flex items-center justify-center"
-          >
-            <X size={21} />
-          </button>
-
-          <div className="w-10" />
-        </div>
-
-        {/* BOOK AREA */}
-
-        <div
-          className="flex-1 flex items-center justify-center px-4 pt-16 pb-6 overflow-hidden relative"
-          onClick={handleBookTap}
+      <div className="h-14 shrink-0 flex items-center justify-between px-4 gap-3 absolute top-0 left-0 right-0 z-30">
+        <button
+          onClick={closeBook}
+          className="mm-icon w-11 h-11 flex items-center justify-center"
         >
-          <div
-            className="relative w-full"
-            style={{
-              perspective: "2200px",
-              maxWidth: "min(92vw, 480px, 58vh)",
+          <X size={21} />
+        </button>
+
+        {/* Poori kitaab ko PDF me download karo */}
+        {onDownload && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDownload(selectedMemory);
             }}
+            disabled={downloading}
+            aria-label={st("mDownload")}
+            title={st("mDownload")}
+            className="mm-icon w-11 h-11 flex items-center justify-center disabled:opacity-60"
           >
-            {/* GROUND SHADOW */}
+            <Download size={20} />
+          </button>
+        )}
+      </div>
 
-            <div className="absolute left-[6%] right-[2%] bottom-[-16px] h-6 rounded-[50%] bg-[rgba(150,10,70,0.3)] blur-lg" />
+      {/* BOOK AREA */}
 
-            {/* STACKED PAGE EDGES - makes it read as a real, thick book */}
+      <div
+        className="flex-1 flex items-center justify-center px-1 pt-14 pb-4 overflow-hidden relative"
+        onClick={handleBookTap}
+      >
+        <div className="bk-wrap" style={{ maxWidth: spreadMax, padding: "0 14px 12px" }}>
+          <div className="bk-stage" style={{ ...styleVars }}>
+            <div className="bk-slide">
+              <div className="bk-ground" style={{ left: closedBook ? "52%" : "2%" }} />
+              <div className="bk-edge l" style={{ width: leftEdge, opacity: closedBook ? 0 : 1 }} />
+              <div className="bk-edge b" style={{ height: 8, left: closedBook ? "50%" : "0%" }} />
 
-            <div className="absolute inset-0 translate-x-[8px] translate-y-[7px] rounded-[8px] bg-[#f0b5c8] shadow-[0_10px_20px_rgba(130,10,60,0.25)]" />
-            <div className="absolute inset-0 translate-x-[6px] translate-y-[5px] rounded-[8px] bg-[#f5c6d5]" />
-            <div className="absolute inset-0 translate-x-[4px] translate-y-[3px] rounded-[8px] bg-[#f9d8e3]" />
-            <div className="absolute inset-0 translate-x-[2px] translate-y-[1.5px] rounded-[8px] bg-[#fde9f0]" />
+              <div className="bk-spread" style={{ aspectRatio: String(PAGE_ASPECT * 2) }}>
+                <div className="bk-under" style={{ left: closedBook ? "50%" : "0%" }} />
 
-            {/* CURRENT PAGE / COVER */}
-
-            <div
-              key={isCoverPage ? "cover" : contentPage.id}
-              className={`
-                relative
-                rounded-[8px]
-                overflow-hidden
-                origin-left
-                shadow-[0_18px_45px_rgba(130,10,60,0.4)]
-                ${isCoverPage ? "book-cover" : "bg-white"}
-                ${isTurning ? "page-turning" : ""}
-                ${
-                  isTurning && turnDirection === "next"
-                    ? "page-next"
-                    : ""
-                }
-                ${
-                  isTurning && turnDirection === "prev"
-                    ? "page-prev"
-                    : ""
-                }
-              `}
-              style={{
-                aspectRatio: "0.72",
-              }}
-            >
-              {isCoverPage ? (
-                /* ================= BOOK COVER ================= */
-                <div className="relative h-full w-full flex items-center justify-center">
-                  {coverImage ? (
-                    <>
-                      <img
-                        src={coverImage}
-                        alt=""
-                        className="absolute inset-0 w-full h-full object-cover scale-125"
-                        style={{
-                          filter:
-                            "blur(14px) saturate(1.6) brightness(0.5)",
-                        }}
-                        draggable="false"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/60" />
-                    </>
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-rose-600 via-rose-500 to-amber-500" />
-                  )}
-
-                  {/* SPINE SHADOW - binding edge */}
-                  <div className="absolute left-0 top-0 bottom-0 w-[9%] bg-gradient-to-r from-black/70 to-transparent pointer-events-none" />
-
-                  <div className="relative text-center px-[10%]">
-                    <p className="cover-tag">
-                      {selectedMemory.tag}
-                    </p>
-
-                    <div className="cover-frame">
-                      <h1 className="cover-title">
-                        {selectedMemory.title}
-                      </h1>
-                    </div>
-
-                    <p className="cover-sub">
-                      {t.memCoverSub}
-                    </p>
-
-                    <p className="cover-date">
-                      {selectedMemory.date}
-                    </p>
-                  </div>
-
-                  <div className="absolute bottom-3 right-4 text-[9px] text-white/60 tracking-[0.2em]">
-                    {currentPage + 1} / {totalSlides}
-                  </div>
+                <div className="bk-half">
+                  {baseL && <BookPage item={baseL} side="L" total={N} memory={selectedMemory} t={t} />}
                 </div>
-              ) : (
-                /* ================= INSIDE PAGE (white paper) ================= */
-                <div className="relative h-full w-full bg-white">
-                  {/* SPINE SHADOW - binding edge */}
-                  <div className="absolute left-0 top-0 bottom-0 w-[4%] bg-gradient-to-r from-black/15 to-transparent pointer-events-none z-10" />
+                <div className="bk-half">
+                  {baseR && <BookPage item={baseR} side="R" total={N} memory={selectedMemory} t={t} />}
+                  <div className="bk-ribbon" style={{ opacity: closedBook ? 1 : 0 }} />
+                </div>
 
-                  <div className="relative h-full w-full pt-[10%] pb-[4%] px-[7%] flex flex-col">
-                    {/* PHOTO */}
+                {/* beech ka jod (gutter) */}
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute", top: 0, bottom: 0, left: "50%", width: "3%", transform: "translateX(-50%)", pointerEvents: "none", zIndex: 4,
+                    opacity: closedBook ? 0 : 1, transition: "opacity 400ms ease",
+                    background: "linear-gradient(90deg, rgba(60,10,30,0) 0%, rgba(60,10,30,0.22) 46%, rgba(40,5,20,0.38) 50%, rgba(60,10,30,0.22) 54%, rgba(60,10,30,0) 100%)",
+                  }}
+                />
 
-                    <div
-                      className="w-full flex items-center justify-center shrink-0"
-                      style={{
-                        height: contentPage.description?.trim()
-                          ? "62%"
-                          : "84%",
-                      }}
-                    >
-                      <img
-                        src={contentPage.image}
-                        alt=""
-                        className="max-w-full max-h-full object-contain rounded-[2px] shadow-[0_4px_16px_rgba(0,0,0,0.18)]"
-                        draggable="false"
-                      />
-                    </div>
-
-                    {/* DESCRIPTION - auto-centers in the remaining white space */}
-
-                    {contentPage.description?.trim() && (
-                      <div className="flex-1 min-h-0 flex items-center justify-center text-center px-[2%]">
-                        <p
-                          className="page-caption"
-                          style={{
-                            fontSize:
-                              contentPage.description.length >
-                              300
-                                ? "clamp(9px, 2vw, 12.5px)"
-                                : contentPage.description
-                                    .length > 140
-                                ? "clamp(10.5px, 2.4vw, 14.5px)"
-                                : "clamp(12.5px, 3vw, 18px)",
-                          }}
-                        >
-                          {contentPage.description}
-                        </p>
+                {leaf && (
+                  <>
+                    {!leaf.still && <div className={`bk-cast ${leaf.dir}`} />}
+                    <div className={`bk-leaf ${leaf.dir}${leaf.still ? " still" : ""}`}>
+                      <div className={faceClass(leaf.front, false)}>
+                        <BookPage item={leaf.front} side={leaf.dir === "next" ? "R" : "L"} total={N} memory={selectedMemory} t={t} />
                       </div>
-                    )}
-
-                    {/* PAGE NUMBER */}
-
-                    <div className="text-center text-[9px] text-[#d9a3b8] tracking-[0.2em] pt-1 shrink-0">
-                      {currentPage + 1} / {totalSlides}
+                      <div className={faceClass(leaf.back, true)}>
+                        <BookPage item={leaf.back} side={leaf.dir === "next" ? "L" : "R"} total={N} memory={selectedMemory} t={t} />
+                      </div>
                     </div>
-                  </div>
-                </div>
-              )}
+                  </>
+                )}
+              </div>
             </div>
-
-            {/* PAGE TURNING OVERLAY - blank paper back, like a real flipping page */}
-
-            {isTurning && (
-              <div
-                className={`
-                  absolute inset-0
-                  bg-[#fff5f8]
-                  rounded-[8px]
-                  pointer-events-none
-                  ${
-                    turnDirection === "next"
-                      ? "page-flip-next"
-                      : "page-flip-prev"
-                  }
-                `}
-              />
-            )}
           </div>
         </div>
-
-        {/* PAGE DOTS - subtle, floating, no text/buttons */}
-
-        {totalSlides > 1 && (
-          <div className="shrink-0 flex items-center justify-center gap-1.5 pb-4 pt-1">
-            {Array.from({ length: totalSlides }).map(
-              (_, index) => (
-                <span
-                  key={index}
-                  className={`rounded-full transition-all duration-300 ${
-                    index === currentPage
-                      ? "w-4 h-1.5 bg-rose-500"
-                      : "w-1.5 h-1.5 bg-[rgba(190,24,93,0.22)]"
-                  }`}
-                />
-              )
-            )}
-          </div>
-        )}
-
-        {/* BOOK CSS */}
-
-        <BookStyles />
       </div>
+
+      {/* Phone seedha ho to bada dekhne ka sanket */}
+      <div className="bk-rotate-hint shrink-0 items-center justify-center pb-1 -mt-3">
+        <span className="text-[10.5px] font-extrabold px-3 py-1 rounded-full" style={{ color: "#a8264f", background: "rgba(255,255,255,0.7)", border: "1px solid rgba(251,113,133,0.3)" }}>
+          {st("mRotateHint")}
+        </span>
+      </div>
+
+      {/* PAGE DOTS - subtle, floating, no text/buttons */}
+
+      {totalSlides > 1 && (
+        <div className="shrink-0 flex items-center justify-center gap-1.5 pb-4 pt-1">
+          {Array.from({ length: totalSlides }).map(
+            (_, index) => (
+              <span
+                key={index}
+                className={`rounded-full transition-all duration-300 ${
+                  index === currentPage
+                    ? "w-4 h-1.5 bg-rose-500"
+                    : "w-1.5 h-1.5 bg-[rgba(190,24,93,0.22)]"
+                }`}
+              />
+            )
+          )}
+        </div>
+      )}
+
+      {/* BOOK CSS */}
+
+      <BookStyles />
+    </div>
   );
 }

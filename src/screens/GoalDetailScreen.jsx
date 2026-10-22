@@ -3,6 +3,7 @@ import {
   ArrowLeft, ChevronLeft, ChevronRight, Trash2, Trophy, Flame,
   Lock, Unlock, Check, Save, BellRing, CalendarDays,
 } from 'lucide-react';
+import { useScreenT } from '../utils/screenTexts';
 
 /* =====================================================================
    PART 2  –  GoalDetailScreen.jsx  (src/screens/ me, GoalsAppScreen.jsx ke saath)
@@ -11,11 +12,9 @@ import {
    ===================================================================== */
 
 import {
-  MONTH_NAMES,
   toDateStr,
   parseDate,
   getDaysInMonth,
-  formatDate,
   isTimeUnlocked,
   getStats,
 } from '../utils/goalHelpers';
@@ -23,13 +22,14 @@ import {
 /* ------------------------- progress ring ------------------------- */
 
 function ProgressRing({ pct }) {
+  const { c: pal, st } = useScreenT();
   const r = 42;
   const c = 2 * Math.PI * r;
   return (
     <div className="relative h-[116px] w-[116px] shrink-0">
       <div
         className="absolute inset-3 rounded-full"
-        style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.95), rgba(255,228,238,0.6) 70%, transparent)' }}
+        style={{ background: pal.isDark ? 'radial-gradient(circle, rgba(30,41,59,0.95), rgba(58,31,51,0.6) 70%, transparent)' : 'radial-gradient(circle, rgba(255,255,255,0.95), rgba(255,228,238,0.6) 70%, transparent)' }}
       />
       <svg
         viewBox="0 0 100 100"
@@ -51,7 +51,7 @@ function ProgressRing({ pct }) {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="gx-num text-[27px] leading-none">{pct}%</span>
-        <span className="mt-1 text-[10px] font-bold text-[#a8466c]">consistency</span>
+        <span className="mt-1 text-[10px] font-bold text-[#a8466c]">{st('gdConsistency')}</span>
       </div>
     </div>
   );
@@ -60,6 +60,8 @@ function ProgressRing({ pct }) {
 /* ---------------------------- screen ---------------------------- */
 
 export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDelete, onRequestComplete }) {
+  const { st, loc } = useScreenT();
+  const formatDate = (s, opts = { day: 'numeric', month: 'short', year: 'numeric' }) => parseDate(s).toLocaleDateString(loc, opts);
   const [note, setNote] = useState('');
   const [, setTick] = useState(0);
 
@@ -109,7 +111,7 @@ export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDel
               aria-label="Finish goal"
               className="gx-gold flex h-11 shrink-0 items-center gap-1.5 px-3.5 text-xs"
             >
-              <Trophy size={15} /> Finish
+              <Trophy size={15} /> {st('gdFinish')}
             </button>
           )}
           <button
@@ -128,15 +130,15 @@ export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDel
             <div className="flex-1 space-y-2.5 text-xs font-semibold text-[#6f2f4b]">
               <div className="flex items-center gap-2">
                 <Unlock size={14} className="shrink-0 text-[#e11d48]" />
-                <span>Opens daily at <b className="font-black text-[#3b0f24]">{goal.actionTime}</b></span>
+                <span>{st('gdOpens')} <b className="font-black text-[#3b0f24]">{goal.actionTime}</b></span>
               </div>
               <div className="flex items-center gap-2">
                 <BellRing size={14} className="shrink-0 text-[#d97706]" />
-                <span>Reminder at <b className="font-black text-[#3b0f24]">{goal.alertTime}</b></span>
+                <span>{st('gdReminder')} <b className="font-black text-[#3b0f24]">{goal.alertTime}</b></span>
               </div>
               <div className="flex items-center gap-2">
                 <CalendarDays size={14} className="shrink-0 text-[#a855f7]" />
-                <span>Started <b className="font-black text-[#3b0f24]">{formatDate(goal.startDate)}</b></span>
+                <span>{st('gdStarted')} <b className="font-black text-[#3b0f24]">{formatDate(goal.startDate)}</b></span>
               </div>
             </div>
           </div>
@@ -146,15 +148,15 @@ export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDel
               <div className="gx-num flex items-center justify-center gap-1 text-xl">
                 <Flame size={17} className="text-[#f59e0b]" /> {stats.streak}
               </div>
-              <p className="gx-muted mt-0.5 text-[11px] font-bold">Current streak</p>
+              <p className="gx-muted mt-0.5 text-[11px] font-bold">{st('gdStreak')}</p>
             </div>
             <div className="gx-tile">
               <div className="gx-num text-xl">{stats.best}</div>
-              <p className="gx-muted mt-0.5 text-[11px] font-bold">Best streak</p>
+              <p className="gx-muted mt-0.5 text-[11px] font-bold">{st('gdBest')}</p>
             </div>
             <div className="gx-tile">
               <div className="gx-num text-xl">{stats.done}/{stats.elapsed}</div>
-              <p className="gx-muted mt-0.5 text-[11px] font-bold">Days done</p>
+              <p className="gx-muted mt-0.5 text-[11px] font-bold">{st('gdDays')}</p>
             </div>
           </div>
         </div>
@@ -164,9 +166,9 @@ export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDel
           <div className="gx-card gx-card-glow mt-4 flex items-start gap-3 p-4">
             <Trophy size={20} className="mt-0.5 shrink-0 text-[#d97706]" />
             <div>
-              <p className="gx-title text-sm">Goal completed</p>
+              <p className="gx-title text-sm">{st('gdCompleted')}</p>
               <p className="mt-0.5 text-xs font-semibold leading-relaxed text-[#6f2f4b]">
-                Finished on {formatDate(goal.completedAt || today)}. Daily unlock, missed banners and reminders are switched off.
+                {st('gdFinishedOn', { d: formatDate(goal.completedAt || today) })}
               </p>
             </div>
           </div>
@@ -183,8 +185,8 @@ export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDel
             <ChevronLeft size={18} />
           </button>
           <div className="text-center">
-            <p className="gx-title text-lg">{MONTH_NAMES[viewMonth]} {viewYear}</p>
-            <p className="gx-muted text-[11px] font-bold">{monthDone} of {monthDays.length} days logged</p>
+            <p className="gx-title text-lg">{new Date(viewYear, viewMonth, 1).toLocaleDateString(loc, { month: 'long' })} {viewYear}</p>
+            <p className="gx-muted text-[11px] font-bold">{st('gdMonthLogged', { a: monthDone, b: monthDays.length })}</p>
           </div>
           <button
             disabled={viewIdx >= maxIdx}
@@ -198,7 +200,7 @@ export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDel
 
         {!goal.completed && (
           <p className="gx-muted mb-4 flex items-center gap-1.5 text-[11px] font-bold">
-            <Lock size={12} /> Each day opens at {goal.actionTime} and locks again as soon as you save.
+            <Lock size={12} /> {st('gdEach', { t: goal.actionTime })}
           </p>
         )}
 
@@ -206,13 +208,13 @@ export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDel
         <div className="space-y-3">
           {notStarted && (
             <div className="gx-day text-sm font-semibold text-[#6f2f4b]">
-              This goal starts on {formatDate(goal.startDate)}. Your first day opens at {goal.actionTime}.
+              {st('gdStarts', { d: formatDate(goal.startDate), t: goal.actionTime })}
             </div>
           )}
 
           {!notStarted && monthDays.length === 0 && (
             <div className="gx-day text-sm font-semibold text-[#6f2f4b]">
-              No days to show for this month.
+              {st('gdNoDays')}
             </div>
           )}
 
@@ -239,22 +241,22 @@ export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDel
               <div key={dateStr} className={`gx-day ${tone}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-black text-[#be123c]">Day {dayNo}</p>
+                    <p className="text-sm font-black text-[#be123c]">{st('gdDay', { n: dayNo })}</p>
                     <p className="gx-muted text-[11px] font-bold">
                       {formatDate(dateStr, { weekday: 'short', day: 'numeric', month: 'short' })}
                     </p>
                   </div>
                   <span className="flex items-center gap-1 text-xs font-extrabold">
                     {isDone ? (
-                      <span className="flex items-center gap-1 text-[#047857]"><Check size={14} /> Done</span>
+                      <span className="flex items-center gap-1 text-[#047857]"><Check size={14} /> {st('gdDone')}</span>
                     ) : isMissed ? (
-                      <span className="text-[#be123c]">⚠️ Missed</span>
+                      <span className="text-[#be123c]">⚠️ {st('gdMissed')}</span>
                     ) : isOpen ? (
-                      <span className="flex items-center gap-1 text-[#b45309]"><Unlock size={13} /> Open now</span>
+                      <span className="flex items-center gap-1 text-[#b45309]"><Unlock size={13} /> {st('gdOpen')}</span>
                     ) : isSkipped ? (
-                      <span className="gx-muted">Not logged</span>
+                      <span className="gx-muted">{st('gdNotLogged')}</span>
                     ) : (
-                      <span className="gx-muted flex items-center gap-1"><Lock size={13} /> Locked</span>
+                      <span className="gx-muted flex items-center gap-1"><Lock size={13} /> {st('gdLocked')}</span>
                     )}
                   </span>
                 </div>
@@ -262,13 +264,13 @@ export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDel
                 {isDone && (
                   <div className="gx-quote mt-3">
                     <p className="text-sm font-semibold leading-relaxed">“{log.note}”</p>
-                    <p className="gx-muted mt-1.5 text-[11px] font-bold">Saved at {log.timestamp}</p>
+                    <p className="gx-muted mt-1.5 text-[11px] font-bold">{st('gdSavedAt', { t: log.timestamp })}</p>
                   </div>
                 )}
 
                 {isMissed && (
                   <p className="mt-2 text-xs font-semibold italic text-[#be123c]">
-                    You missed this day. Tomorrow is a fresh start.
+                    {st('gdMissedMsg')}
                   </p>
                 )}
 
@@ -279,20 +281,20 @@ export default function GoalDetailScreen({ goal, onBack, onSaveLog, onRequestDel
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
-                      placeholder="How did it go today? e.g. Crushed leg day 💪"
+                      placeholder={st('gdPh')}
                       className="gx-input w-full px-3.5 py-3 text-sm font-semibold outline-none"
                     />
                     <button
                       onClick={submit}
                       className="gx-primary flex w-full items-center justify-center gap-2 py-3 text-sm"
                     >
-                      <Save size={15} /> Save today’s progress
+                      <Save size={15} /> {st('gdSaveToday')}
                     </button>
                   </div>
                 )}
 
                 {!isDone && !isMissed && !isOpen && !isSkipped && isToday && (
-                  <p className="gx-muted mt-2 text-xs font-semibold">Opens today at {goal.actionTime}.</p>
+                  <p className="gx-muted mt-2 text-xs font-semibold">{st('gdOpensToday', { t: goal.actionTime })}</p>
                 )}
               </div>
             );

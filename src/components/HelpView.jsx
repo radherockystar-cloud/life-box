@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { HelpCircle, ChevronDown, Clock } from 'lucide-react';
 import { translations } from '../utils/translations';
+import { useScreenT } from '../utils/screenTexts';
 
 const EMAIL = 'lifeboxapp.dev@gmail.com';
 const INSTAGRAM_URL = 'https://www.instagram.com/rocky_star474';
@@ -87,6 +88,87 @@ const FAQ = [
   },
 ];
 
+const FAQ_HI = [
+  {
+    q: 'प्लान या जन्मदिन का रिमाइंडर कैसे जोड़ूँ?',
+    a: [
+      'प्लानर टैब खोलें और + बटन दबाएँ। शीर्षक लिखें, तारीख और याद दिलाने का समय चुनें, जन्मदिन या सालगिरह के लिए “हर साल” चालू करें, चाहें तो नोट जोड़ें और सेव करें।',
+      'आपको 7 दिन पहले और फिर उसी दिन चुने हुए समय पर रिमाइंडर मिलेगा। सिर्फ़ इन्हीं दो दिनों पर प्लानर के ऊपर एक बैनर भी दिखता है। आपके प्लान निजी रहते हैं और कैलेंडर पर नहीं दिखते।',
+    ],
+  },
+  {
+    q: 'मेरा रिमाइंडर या नोटिफ़िकेशन नहीं आया। क्या करूँ?',
+    a: ['कृपया ये बातें एक-एक करके जाँचें:'],
+    list: [
+      'सेव करते समय प्लान का समय आगे का होना चाहिए। बीत चुके समय का रिमाइंडर नहीं बजेगा।',
+      'फ़ोन की Settings > Apps > Life Box > Notifications में नोटिफ़िकेशन की अनुमति दें।',
+      'ऐप के लिए “Alarms & reminders” की अनुमति दें (Android 12 और ऊपर), ताकि रिमाइंडर ठीक समय पर आए।',
+      'ऐप की बैटरी उपयोग सेटिंग “Unrestricted” या “No restrictions” रखें। बैटरी सेवर बैकग्राउंड रिमाइंडर रोक सकते हैं।',
+      'ऐप को फ़ोर्स-स्टॉप न करें, और ऐप बंद करने वाले “clean” या “boost” ऐप से बचें।',
+      'प्लानर में My Plans (लॉक आइकन) खोलें और देखें कि “Plan reminders” चालू है।',
+      'अगर आपने फ़ोन की तारीख, समय या टाइम ज़ोन बदला है, तो प्लानर एक बार खोलें ताकि रिमाइंडर फिर से सेट हो जाएँ।',
+    ],
+  },
+  {
+    q: 'नोट्स और पसंदीदा कैसे काम करते हैं?',
+    a: [
+      'Life Box Notes खोलें, नोट लिखने के लिए + दबाएँ और Save दबाएँ। अगर आप बिना सेव किए वापस जाते हैं, तो आपका नोट अपने आप सेव हो जाता है ताकि टेक्स्ट न खोए।',
+      'किसी नोट को पसंदीदा बनाने के लिए उसके सितारे को दबाएँ। पसंदीदा नोट्स सूची में सबसे ऊपर रहते हैं। सितारा हटाने पर नोट अपनी पुरानी जगह पर लौट जाता है। सूची छाँटने के लिए All और Favourites बटन इस्तेमाल करें।',
+    ],
+  },
+  {
+    q: 'फ़ोटो या वीडियो के साथ याद कैसे सेव करूँ?',
+    a: [
+      'Memories खोलें और + दबाएँ। शीर्षक लिखें, टैग चुनें, फ़ोटो या वीडियो जोड़ें और कुछ शब्द लिखें। जगह बचाने के लिए फ़ोटो अपने आप छोटी हो जाती हैं। 2.5 MB तक के वीडियो चलते हैं।',
+      'किसी याद को दबाकर पूरी स्क्रीन पर देखें, बदलें, शेयर करें या हटाएँ।',
+    ],
+  },
+  {
+    q: 'लाइफ मीटर क्या है?',
+    a: [
+      'लाइफ मीटर बताता है कि आपने कितनी ज़िंदगी जी ली है। जन्मतिथि (और चाहें तो नाम) डालें, Done दबाएँ, और आपको अपनी उम्र, दिन, हफ़्ते, घंटे, मिनट और सेकंड दिखेंगे, साथ में दिल की धड़कनें, साँसें और कदम जैसे आँकड़े भी। पुरानी एंट्री खोलने, शेयर करने या हटाने के लिए History बटन इस्तेमाल करें।',
+      'उम्र, दिन और समय बिल्कुल सटीक हैं। धड़कनें, पानी और खाना जैसे आँकड़े औसत मानवीय मूल्यों से निकाले जाते हैं, ये मेडिकल माप नहीं हैं।',
+    ],
+  },
+  {
+    q: 'AI असिस्टेंट कैसे इस्तेमाल करूँ?',
+    a: [
+      'होम से AI Assistant खोलें और दोस्त से बात करने की तरह संदेश लिखें। आप फ़ोटो जोड़ सकते हैं और सामान्य सवाल पूछ सकते हैं। AI असिस्टेंट आपके सेव किए हुए नोट्स, लक्ष्य, यादें या प्लान नहीं पढ़ता। नई चैट के लिए + दबाएँ और पुरानी चैट खोलने के लिए हिस्ट्री बटन दबाएँ।',
+      'फ्री यूज़र्स को कुछ ही AI संदेश मिलते हैं। उसके बाद चैट जारी रखने के लिए Pro प्लान चाहिए। Pro में हर महीने अच्छा AI कोटा मिलता है; अगर वह पूरा हो जाए तो AI असिस्टेंट अगले महीने की 1 तारीख तक रुक जाता है। AI असिस्टेंट को इंटरनेट चाहिए और उसके जवाब कभी-कभी गलत हो सकते हैं, इसलिए ज़रूरी बातें खुद जाँच लें। आप जो संदेश लिखते हैं (और जो फ़ोटो जोड़ते हैं) वे जवाब बनाने के लिए Google की Gemini सेवा को भेजे जाते हैं, जैसा प्राइवेसी पॉलिसी में बताया गया है।',
+    ],
+  },
+  {
+    q: 'AI असिस्टेंट जवाब नहीं दे रहा। क्या करूँ?',
+    a: ['अपना इंटरनेट जाँचें, कुछ सेकंड रुकें और संदेश फिर भेजें। अगर बार-बार फ़ेल हो, तो नई चैट शुरू करें। फिर भी एरर दिखे, तो ऊपर के ईमेल या Instagram बटन से हमें उस संदेश का स्क्रीनशॉट भेजें।'],
+  },
+  {
+    q: 'मुझसे गलती से कुछ डिलीट हो गया। क्या वापस मिल सकता है?',
+    a: ['डिलीट किए गए नोट्स और यादें पहले बिन में जाते हैं। उन्हें वापस लाने के लिए ऐप की Settings से बिन खोलें। एक बार बिन से हटा देने पर वे वापस नहीं मिलते।'],
+  },
+  {
+    q: 'मेरा डेटा कहाँ रहता है? क्या वह खो सकता है?',
+    a: [
+      'अगर आप Life Box गेस्ट की तरह इस्तेमाल करते हैं, तो आपका कंटेंट सिर्फ़ आपके फ़ोन में रहता है। ऐप अनइंस्टॉल करने, उसका डेटा साफ़ करने या फ़ोन खोने पर सब कुछ हमेशा के लिए मिट सकता है, और हम उसे वापस नहीं ला सकते।',
+      'अगर आप लॉगिन करते हैं, तो आपका कंटेंट आपके निजी क्लाउड (Google Firebase) में भी सेव होता है, जिससे आप उसे दूसरे डिवाइस पर खोल सकते हैं और नए फ़ोन पर वापस पा सकते हैं। लॉगआउट करने से पहले आपके बदलाव अपलोड हो जाते हैं। बहुत ज़रूरी चीज़ों की कॉपी Backup / Export से भी रख सकते हैं।',
+    ],
+  },
+  {
+    q: 'सब्सक्रिप्शन कैसे काम करते हैं?',
+    a: [
+      'Life Box कुछ सीमाओं के साथ मुफ़्त है। Pro से AI चैट (हर महीने उचित कोटे के साथ) और Memories टैब खुलते हैं। Ad-free पूरे ऐप से विज्ञापन हटाता है। Pro + Ad-free प्लान भी है। सभी प्लान Google Play से हर महीने बिल होते हैं। प्लान देखने के लिए Me > Manage Subscription खोलें।',
+      'रद्द करने के लिए Google Play > Payments & subscriptions > Subscriptions खोलें, Life Box चुनें और Cancel दबाएँ। आपने जिस अवधि का पैसा दिया है, उसके अंत तक प्लान चलता रहता है। प्लान खत्म होने पर आपका सेव किया डेटा कभी नहीं मिटता; बस पेड फ़ीचर फिर बंद हो जाते हैं। अगर ऐप दोबारा इंस्टॉल करें या फ़ोन बदलें, तो Manage Subscription खोलकर Restore purchases दबाएँ।',
+    ],
+  },
+  {
+    q: 'भाषा या थीम कैसे बदलूँ?',
+    a: ['मेन्यू खोलें (होम पर ऊपर बाईं ओर) और Language या Theme चुनें, फिर अपनी पसंद का विकल्प चुनें।'],
+  },
+  {
+    q: 'बग की रिपोर्ट या नया फ़ीचर कैसे सुझाऊँ?',
+    a: ['मेन्यू में Feedback & Support इस्तेमाल करें, या ऊपर के बटनों से हमसे संपर्क करें। बग के लिए बताएँ कि आप क्या कर रहे थे, आपने क्या सोचा था, असल में क्या हुआ, आपके फ़ोन का मॉडल और Android वर्ज़न। स्क्रीनशॉट से बहुत मदद मिलती है।'],
+  },
+];
+
 const css = `
 @keyframes hlpFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 @keyframes hlpPulse{0%,100%{opacity:.75}50%{opacity:1}}
@@ -156,6 +238,8 @@ const InstagramLogo = () => (
 
 export default function HelpView({ currentTheme, currentLang }) {
   const t = translations[currentLang] || translations.en;
+  const { st, lang } = useScreenT();
+  const FAQ_SHOWN = lang === 'hi' ? FAQ_HI : FAQ;
   const dark = currentTheme === 'dark';
   const [openIdx, setOpenIdx] = useState(null);
 
@@ -175,14 +259,14 @@ export default function HelpView({ currentTheme, currentLang }) {
       {/* Contact */}
       <div style={{ padding: '20px', borderRadius: '20px', background: cardBg, border: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div>
-          <div style={{ fontSize: '14px', fontWeight: '900', color: ink }}>Need help? Talk to us</div>
+          <div style={{ fontSize: '14px', fontWeight: '900', color: ink }}>{st('zHelpNeed')}</div>
           <p style={{ fontSize: '12.5px', color: body, lineHeight: '1.75', fontWeight: '600', marginTop: '6px' }}>
-            Have a question, a problem or an idea? Tap a button below to reach the developer directly. We read every message.
+            {st('zHelpSub')}
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: '12px', padding: '6px 0 2px' }}>
-          <Logo3D href={`mailto:${EMAIL}?subject=${encodeURIComponent('Life Box Help')}`} label="Email us" handle={EMAIL} glow="rgba(234,67,53,0.5)" dark={dark}>
+          <Logo3D href={`mailto:${EMAIL}?subject=${encodeURIComponent('Life Box Help')}`} label={st('zHelpEmail')} handle={EMAIL} glow="rgba(234,67,53,0.5)" dark={dark}>
             <GmailLogo />
           </Logo3D>
           <Logo3D href={INSTAGRAM_URL} external label="Instagram" handle={INSTAGRAM_HANDLE} glow="rgba(214,36,159,0.55)" dark={dark}>
@@ -193,15 +277,15 @@ export default function HelpView({ currentTheme, currentLang }) {
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px 12px', borderRadius: '12px', background: dark ? '#0f172a' : '#ffffff', border: '1px solid rgba(147,51,234,0.2)' }}>
           <Clock size={15} color="#9333ea" style={{ marginTop: '2px', flexShrink: 0 }} />
           <span style={{ fontSize: '11.5px', color: body, lineHeight: '1.6', fontWeight: '600' }}>
-            We usually reply within a few days. For faster help with a problem, include your phone model, Android version and a screenshot.
+            {st('zHelpReply')}
           </span>
         </div>
       </div>
 
       {/* FAQ */}
-      <div style={{ fontSize: '14px', fontWeight: '900', color: ink, marginTop: '4px' }}>Frequently asked questions</div>
+      <div style={{ fontSize: '14px', fontWeight: '900', color: ink, marginTop: '4px' }}>{st('zHelpFaq')}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {FAQ.map((item, i) => {
+        {FAQ_SHOWN.map((item, i) => {
           const open = openIdx === i;
           return (
             <div key={item.q} style={{ borderRadius: '16px', background: cardBg, border: open ? '1px solid rgba(147,51,234,0.45)' : '1px solid rgba(0,0,0,0.06)', overflow: 'hidden' }}>

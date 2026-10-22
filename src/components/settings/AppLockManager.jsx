@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Unlock, Fingerprint, KeyRound } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { appStorage } from '../../utils/appStorage';
 
 export default function AppLockManager({ currentTheme }) {
@@ -29,22 +29,6 @@ export default function AppLockManager({ currentTheme }) {
     setInputPin('');
     alert('App Lock Disabled! 🔓');
     window.location.reload();
-  };
-
-  const handleTestFingerprint = async () => {
-    if (window.PublicKeyCredential) {
-      try {
-        alert('Scanning Fingerprint... Place your finger on the sensor.');
-        // Simulating biometric success for local web environment
-        setTimeout(() => {
-          alert('Fingerprint Verified Successfully! 🧬✨');
-        }, 1000);
-      } catch (err) {
-        alert('Biometric authentication failed.');
-      }
-    } else {
-      alert('Fingerprint API not supported on this browser/device container.');
-    }
   };
 
   return (
@@ -87,12 +71,6 @@ export default function AppLockManager({ currentTheme }) {
           </form>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <button 
-              onClick={handleTestFingerprint}
-              style={{ width: '100%', padding: '10px', borderRadius: '12px', background: '#e0f2fe', border: '1px solid #bae6fd', color: '#0284c7', fontSize: '12px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-            >
-              <Fingerprint size={16} /> Test Fingerprint Unlock
-            </button>
             <button 
               onClick={handleDisableLock}
               style={{ width: '100%', padding: '10px', borderRadius: '12px', background: '#fef2f2', border: '1px solid #fee2e2', color: '#ef4444', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }}

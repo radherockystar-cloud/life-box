@@ -1,8 +1,9 @@
 import React from "react";
-import { Heart, Search, Calendar, Tag, Plus, Trash2, BookOpen } from "lucide-react";
+import { Heart, Search, Calendar, Tag, Plus, Trash2, BookOpen, Download } from "lucide-react";
 import { MEMORIES_CSS, MEMORY_TINTS } from "./memoriesTheme";
 import { MEMORIES_DARK_CSS } from "./memoriesDark";
 import { useApp } from "../../context/AppContext";
+import { useScreenT } from "../../utils/screenTexts";
 
 // Main Memories tab: banner, search, memory grid, empty state and the + button.
 export default function MemoriesHome({
@@ -11,10 +12,13 @@ export default function MemoriesHome({
   setSearchQuery,
   openMemory,
   deleteMemory,
+  downloadMemory,
+  downloading = false,
   setShowCreate,
 }) {
   // Theme (c) + language (t) poore app wale context se
   const { c, t } = useApp();
+  const { st } = useScreenT();
 
   return (
     <div className="space-y-4 pb-28 animate-in fade-in duration-300">
@@ -96,20 +100,37 @@ ${MEMORIES_DARK_CSS}`}</style>
 
               <div className="p-3">
                 <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <span className="mm-pill text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 max-w-[70%] truncate">
+                  <span className="mm-pill text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 max-w-[55%] truncate">
                     <Tag size={10} />
                     {memory.tag}
                   </span>
 
-                  <button
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      deleteMemory(memory.id);
-                    }}
-                    className="mm-mini w-7 h-7 rounded-full flex items-center justify-center"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {downloadMemory && (
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          downloadMemory(memory);
+                        }}
+                        disabled={downloading}
+                        aria-label={st("mDownload")}
+                        title={st("mDownload")}
+                        className="mm-mini w-7 h-7 rounded-full flex items-center justify-center disabled:opacity-50"
+                      >
+                        <Download size={14} />
+                      </button>
+                    )}
+
+                    <button
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        deleteMemory(memory.id);
+                      }}
+                      className="mm-mini w-7 h-7 rounded-full flex items-center justify-center"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
 
                 <h3 className="font-black text-sm line-clamp-2" style={{ color: c.selectedText }}>

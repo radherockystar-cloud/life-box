@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Search, Trash2, Save, Image as ImageIcon, Share2, Download, X, Heart, Pencil, Play } from 'lucide-react';
 import { useBackHandler } from '../utils/useBackHandler';
 import { moveToBin } from '../utils/binStorage';
-import { saveMedia, deleteMedia, blobToDataUrl } from '../utils/mediaStore';
+import { saveMedia, deleteMedia, blobToDataUrl, getMediaUrl } from '../utils/mediaStore';
 import useMediaUrl from '../utils/useMediaUrl';
 import { appStorage } from '../utils/appStorage';
+import { isNative, shareBlobNative } from '../utils/nativeFile';
+import { useScreenT, tokensOf, glassOf } from '../utils/screenTexts';
 
 const VAULT_KEY = 'newlife_vault';
 const MAX_VIDEO_BYTES = 30 * 1024 * 1024; // video phone ki badi storage (IndexedDB) mein jaati hai; export file badi na ho isliye 30 MB limit
@@ -15,7 +17,7 @@ const TAGS = [
   { value: 'Project', label: 'Project / Code', emoji: '💻' },
   { value: 'Special', label: 'Special Moment', emoji: '✨' },
 ];
-const tagMeta = (tag) => TAGS.find((t) => t.value === tag) || { value: tag, label: tag || 'Memory', emoji: '📸' };
+const tagMetaBase = (tag) => TAGS.find((t) => t.value === tag) || { value: tag, label: tag || 'Memory', emoji: '📸' };
 
 const EMPTY_MEMORY = { id: null, title: '', desc: '', tag: 'Milestone', mediaKey: '', mediaUrl: '', mediaType: 'image' };
 
@@ -25,10 +27,10 @@ const todayLocal = () => {
   const d = new Date();
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
-const prettyDate = (str) => {
+const prettyDate = (str, loc = 'en-IN') => {
   const [y, m, d] = String(str || '').split('-').map(Number);
   if (!y || !m || !d) return str || '';
-  return new Date(y, m - 1, d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(y, m - 1, d).toLocaleDateString(loc, { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
 // Photo ko chhota karke (max 1600px, JPEG) Blob banate hain, taaki phone ki storage jaldi na bhare
@@ -87,12 +89,6 @@ const loadMemories = () => {
 };
 
 // ---------- design ----------
-const glass = {
-  background: 'linear-gradient(160deg,#ffffff 0%,rgba(255,255,255,0.82) 55%,rgba(255,234,243,0.96) 100%)',
-  border: '1px solid rgba(251,113,133,0.25)',
-  borderTop: '1px solid #ffffff',
-  boxShadow: 'inset 0 2px 0 #ffffff, inset 0 -9px 14px -10px rgba(244,63,94,0.25), 0 10px 22px -10px rgba(244,63,94,0.35), 0 0 22px -8px rgba(251,113,133,0.35)',
-};
 const roseBtn = {
   background: 'linear-gradient(160deg,#fb7185 0%,#e11d48 55%,#be123c 100%)',
   border: '1px solid rgba(255,255,255,0.5)',
@@ -100,14 +96,13 @@ const roseBtn = {
   boxShadow: 'inset 0 1.5px 0 rgba(255,255,255,0.65), inset 0 -6px 12px -6px rgba(80,0,40,0.5), 0 8px 18px -4px rgba(225,29,72,0.65), 0 0 24px rgba(244,63,94,0.5)',
   color: '#fff',
 };
-const INK = '#3b0f24';
-
 const CSS = `
 @keyframes memBeat{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
 @keyframes memRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .mem-card{animation:memRise .3s ease-out}
 .mem-scroll::-webkit-scrollbar{width:0;height:0}
 .mem-field::placeholder{color:rgba(190,24,93,.4)}
+[data-theme="dark"] .mem-field::placeholder{color:rgba(253,164,175,.5)}
 .mem-field:focus{border-color:rgba(244,63,94,.85)!important;box-shadow:0 0 0 3px rgba(244,63,94,.15),0 0 22px rgba(244,63,94,.25)!important}
 `;
 
@@ -119,6 +114,16 @@ const TAG_BG = {
 };
 
 export default function MemoriesAppScreen({ onBack }) {
+  const { c, st, loc } = useScreenT();
+  const T = tokensOf(c);
+  const INK = c.text;
+  const glass = glassOf(c);
+  const tagLabel = (value, fallback) => (['Milestone', 'Friends', 'Project', 'Special'].includes(value) ? st('t' + value) : fallback);
+  const tagMeta = (tag) => {
+    const base = tagMetaBase(tag);
+    return { ...base, label: tagLabel(base.value, base.label) };
+  };
+  const TAGS_L = TAGS.map((t) => ({ ...t, label: tagLabel(t.value, t.label) }));
   const [memories, setMemories] = useState(loadMemories);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTag, setActiveTag] = useState('All');
@@ -196,7 +201,7 @@ export default function MemoriesAppScreen({ onBack }) {
       let type;
       if (file.type.startsWith('video')) {
         if (file.size > MAX_VIDEO_BYTES) {
-          setMediaError('This video is too big. Please pick a video under 30 MB.');
+          setMediaError(st('mErrBig'));
           return;
         }
         blob = file;
@@ -209,7 +214,7 @@ export default function MemoriesAppScreen({ onBack }) {
       setPending({ blob, type, previewUrl: URL.createObjectURL(blob) });
       setMediaRemoved(false);
     } catch (err) {
-      setMediaError("Couldn't read this file. Please try another one.");
+      setMediaError(st('mErrRead'));
     }
   };
 
@@ -223,7 +228,7 @@ export default function MemoriesAppScreen({ onBack }) {
     e.preventDefault();
     if (saving) return;
     if (!currentMemory.title.trim()) {
-      setMediaError('Please add a title for your memory.');
+      setMediaError(st('mErrTitle'));
       return;
     }
     setSaving(true);
@@ -241,7 +246,7 @@ export default function MemoriesAppScreen({ onBack }) {
         } catch (err) {
           // IndexedDB na chale to chhoti photo purane tareeke se (seedha item mein) rakh lo
           if (pending.blob.size > 1.5 * 1024 * 1024) {
-            setMediaError("Couldn't save this file on your phone. Please try a smaller photo.");
+            setMediaError(st('mErrSave'));
             return;
           }
           mediaKey = '';
@@ -292,23 +297,64 @@ export default function MemoriesAppScreen({ onBack }) {
 
     // Bin mein bhejo (photo/video Bin mein bhi bachi rehti hai, restore par wapas aati hai)
     if (!moveToBin(itemToDelete, VAULT_KEY)) {
-      setToast('Could not move to Bin. Phone storage is full.');
+      setToast(st('binFail'));
       return;
     }
     setMemories(memories.filter((m) => m.id !== id));
     setActiveViewer(null);
-    setToast('Moved to Bin');
+    setToast(st('binMoved'));
+  };
+
+  // Photo / video ko File banata hai, taaki share me text ke saath wo bhi jaye
+  const getItemFile = async (item) => {
+    let url = item.mediaUrl || '';
+    if (item.mediaKey) {
+      try {
+        url = (await getMediaUrl(item.mediaKey)) || url;
+      } catch (err) {
+        // url waisa hi rahega
+      }
+    }
+    if (!url) return null;
+    const blob = await (await fetch(url)).blob();
+    const type = blob.type || item.mediaMime || (item.mediaType === 'video' ? 'video/mp4' : 'image/jpeg');
+    return new File([blob], downloadName({ ...item, mediaMime: type }), { type });
   };
 
   const handleShare = async (item, e) => {
     if (e) e.stopPropagation();
     const text = `${item.title}${item.desc ? ` - ${item.desc}` : ''}`;
     try {
+      // Android app: photo/video ko file bana kar Android ke share sheet se bhejte hain
+      if (isNative() && (item.mediaKey || item.mediaUrl)) {
+        try {
+          const file = await getItemFile(item);
+          if (file) {
+            await shareBlobNative(file, file.name, { title: item.title, text, dialogTitle: item.title });
+            return;
+          }
+        } catch (err) {
+          // file share na ho paye to neeche text share chalega
+        }
+      }
+      // Pehle photo/video ke saath share try karte hain
+      if ((item.mediaKey || item.mediaUrl) && navigator.share && navigator.canShare) {
+        let file = null;
+        try {
+          file = await getItemFile(item);
+        } catch (err) {
+          file = null;
+        }
+        if (file && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: item.title, text });
+          return;
+        }
+      }
       if (navigator.share) {
         await navigator.share({ title: item.title, text });
       } else {
         await navigator.clipboard.writeText(text);
-        setToast('Copied to clipboard');
+        setToast(st('copied'));
       }
     } catch (err) {
       // share cancel kiya to kuch nahi karna
@@ -338,13 +384,13 @@ export default function MemoriesAppScreen({ onBack }) {
       {/* Header */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} aria-label="Back" style={{ ...glass, width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48', cursor: 'pointer' }}>
+          <button onClick={onBack} aria-label="Back" style={{ ...glass, width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.icon, cursor: 'pointer' }}>
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h2 style={{ fontSize: '21px', fontWeight: 900, color: INK, textShadow: '0 0 16px rgba(251,113,133,0.4)' }}>Memories Vault</h2>
-            <p style={{ fontSize: '11.5px', fontWeight: 700, color: '#a8466c', marginTop: '2px' }}>
-              {memories.length === 0 ? 'Cherish your special moments' : `${memories.length} ${memories.length === 1 ? 'memory' : 'memories'} saved`}
+            <h2 style={{ fontSize: '21px', fontWeight: 900, color: INK, textShadow: '0 0 16px rgba(251,113,133,0.4)' }}>{st('mTitle')}</h2>
+            <p style={{ fontSize: '11.5px', fontWeight: 700, color: T.sub, marginTop: '2px' }}>
+              {memories.length === 0 ? st('mCherish') : st(memories.length === 1 ? 'mCount1' : 'mCountN', { n: memories.length })}
             </p>
           </div>
         </div>
@@ -354,8 +400,8 @@ export default function MemoriesAppScreen({ onBack }) {
       </div>
 
       {storageFull && (
-        <div style={{ ...glass, borderRadius: '18px', padding: '12px 14px', border: '1px solid rgba(225,29,72,0.6)', fontSize: '12px', fontWeight: 800, color: '#be123c', lineHeight: 1.5 }}>
-          ⚠️ Phone storage for the app is full. Your latest change may not be saved. Delete some old memories or use smaller photos/videos.
+        <div style={{ ...glass, borderRadius: '18px', padding: '12px 14px', border: '1px solid rgba(225,29,72,0.6)', fontSize: '12px', fontWeight: 800, color: T.acc, lineHeight: 1.5 }}>
+          {st('mFull')}
         </div>
       )}
 
@@ -365,7 +411,7 @@ export default function MemoriesAppScreen({ onBack }) {
         <input
           type="text"
           className="mem-field"
-          placeholder="Search memories or tags..."
+          placeholder={st('mSearch')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '13px', fontWeight: 700, color: INK }}
@@ -374,7 +420,7 @@ export default function MemoriesAppScreen({ onBack }) {
 
       {/* Tag filter */}
       <div className="mem-scroll" style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '2px 2px 6px' }}>
-        {[{ value: 'All', label: 'All', emoji: '🌸' }, ...TAGS].map((t) => {
+        {[{ value: 'All', label: st('tAll'), emoji: '🌸' }, ...TAGS_L].map((t) => {
           const active = activeTag === t.value;
           return (
             <button
@@ -389,7 +435,7 @@ export default function MemoriesAppScreen({ onBack }) {
                 fontSize: '12px',
                 fontWeight: 900,
                 whiteSpace: 'nowrap',
-                color: active ? '#fff' : '#a8264f',
+                color: active ? '#fff' : T.label,
                 cursor: 'pointer',
               }}
             >
@@ -405,10 +451,10 @@ export default function MemoriesAppScreen({ onBack }) {
           <div style={{ ...glass, borderRadius: '28px', textAlign: 'center', padding: '44px 20px' }}>
             <div style={{ fontSize: '44px' }}>📸</div>
             <div style={{ fontSize: '15px', fontWeight: 900, color: INK, marginTop: '8px' }}>
-              {memories.length === 0 ? 'No memories yet' : 'Nothing found'}
+              {memories.length === 0 ? st('mNone') : st('mNothing')}
             </div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#a8466c', marginTop: '4px' }}>
-              {memories.length === 0 ? 'Tap + to save your first moment!' : 'Try another word or tag.'}
+            <div style={{ fontSize: '12px', fontWeight: 700, color: T.sub, marginTop: '4px' }}>
+              {memories.length === 0 ? st('mTapPlus') : st('mTry')}
             </div>
           </div>
         ) : (
@@ -420,20 +466,20 @@ export default function MemoriesAppScreen({ onBack }) {
                   <div style={{ position: 'relative', height: '128px', background: TAG_BG[item.tag] || TAG_BG.Special, overflow: 'hidden' }}>
                     <MemoryThumb item={item} meta={meta} />
                     <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '50%', background: 'linear-gradient(180deg,transparent,rgba(60,10,30,0.45))' }} />
-                    <span style={{ position: 'absolute', left: '10px', bottom: '8px', fontSize: '9.5px', fontWeight: 900, padding: '3px 9px', borderRadius: '10px', background: 'rgba(255,255,255,0.92)', color: '#be123c', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+                    <span style={{ position: 'absolute', left: '10px', bottom: '8px', fontSize: '9.5px', fontWeight: 900, padding: '3px 9px', borderRadius: '10px', background: 'rgba(255,255,255,0.92)', color: T.acc, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
                       {meta.emoji} {meta.label}
                     </span>
                   </div>
                   <div style={{ padding: '12px 12px 10px', display: 'flex', flexDirection: 'column', flex: 1 }}>
                     <h4 className="line-clamp-1" style={{ fontSize: '13px', fontWeight: 900, color: INK }}>{item.title}</h4>
-                    <p className="line-clamp-2" style={{ fontSize: '11px', fontWeight: 600, color: '#7a3552', lineHeight: 1.45, marginTop: '3px', minHeight: '32px' }}>{item.desc}</p>
+                    <p className="line-clamp-2" style={{ fontSize: '11px', fontWeight: 600, color: T.body, lineHeight: 1.45, marginTop: '3px', minHeight: '32px' }}>{item.desc}</p>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(251,113,133,0.2)' }}>
-                      <span style={{ fontSize: '9.5px', fontWeight: 800, color: '#b0587a' }}>{prettyDate(item.date)}</span>
+                      <span style={{ fontSize: '9.5px', fontWeight: 800, color: T.soft }}>{prettyDate(item.date, loc)}</span>
                       <div style={{ display: 'flex', gap: '4px' }}>
-                        <button onClick={(e) => handleShare(item, e)} aria-label="Share" style={{ padding: '6px', borderRadius: '10px', color: '#e11d48', background: 'rgba(244,63,94,0.1)', cursor: 'pointer' }}>
+                        <button onClick={(e) => handleShare(item, e)} aria-label="Share" style={{ padding: '6px', borderRadius: '10px', color: T.icon, background: 'rgba(244,63,94,0.1)', cursor: 'pointer' }}>
                           <Share2 size={13} />
                         </button>
-                        <button onClick={(e) => deleteMemory(item.id, e)} aria-label="Delete" style={{ padding: '6px', borderRadius: '10px', color: '#e11d48', background: 'rgba(244,63,94,0.1)', cursor: 'pointer' }}>
+                        <button onClick={(e) => deleteMemory(item.id, e)} aria-label="Delete" style={{ padding: '6px', borderRadius: '10px', color: T.icon, background: 'rgba(244,63,94,0.1)', cursor: 'pointer' }}>
                           <Trash2 size={13} />
                         </button>
                       </div>
@@ -459,14 +505,14 @@ export default function MemoriesAppScreen({ onBack }) {
 
       {/* Create / Edit Memory */}
       {isEditing && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', flexDirection: 'column', padding: '18px', background: 'radial-gradient(90% 40% at 0% 0%,rgba(251,113,133,.28),transparent 60%),radial-gradient(80% 40% at 100% 100%,rgba(244,114,182,.28),transparent 62%),linear-gradient(180deg,#fff8fb,#ffeaf3)' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', flexDirection: 'column', padding: '18px', background: c.isDark ? c.pageBg : 'radial-gradient(90% 40% at 0% 0%,rgba(251,113,133,.28),transparent 60%),radial-gradient(80% 40% at 100% 100%,rgba(244,114,182,.28),transparent 62%),linear-gradient(180deg,#fff8fb,#ffeaf3)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexShrink: 0 }}>
-            <button onClick={closeEditor} aria-label="Close" style={{ ...glass, width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48', cursor: 'pointer' }}>
+            <button onClick={closeEditor} aria-label="Close" style={{ ...glass, width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.icon, cursor: 'pointer' }}>
               <ArrowLeft size={20} />
             </button>
-            <h3 style={{ fontSize: '15px', fontWeight: 900, color: INK }}>{currentMemory.id ? 'Edit Memory' : 'New Memory'}</h3>
+            <h3 style={{ fontSize: '15px', fontWeight: 900, color: INK }}>{currentMemory.id ? st('mEditT') : st('mNewT')}</h3>
             <button onClick={handleSave} disabled={saving} style={{ ...roseBtn, opacity: saving ? 0.7 : 1, height: '44px', padding: '0 18px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 900, cursor: 'pointer' }}>
-              <Save size={16} /> Save
+              <Save size={16} /> {st('save')}
             </button>
           </div>
 
@@ -474,21 +520,21 @@ export default function MemoriesAppScreen({ onBack }) {
             <input
               type="text"
               className="mem-field"
-              placeholder="Memory title..."
+              placeholder={st('mTitlePh')}
               value={currentMemory.title}
               onChange={(e) => setCurrentMemory({ ...currentMemory, title: e.target.value })}
               style={{ ...glass, borderRadius: '20px', padding: '15px 18px', fontSize: '16px', fontWeight: 900, color: INK, outline: 'none' }}
             />
 
             <div className="mem-scroll" style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '2px' }}>
-              {TAGS.map((t) => {
+              {TAGS_L.map((t) => {
                 const active = currentMemory.tag === t.value;
                 return (
                   <button
                     key={t.value}
                     type="button"
                     onClick={() => setCurrentMemory({ ...currentMemory, tag: t.value })}
-                    style={{ ...(active ? roseBtn : glass), flexShrink: 0, borderRadius: '16px', padding: '10px 14px', fontSize: '12px', fontWeight: 900, whiteSpace: 'nowrap', color: active ? '#fff' : '#a8264f', cursor: 'pointer' }}
+                    style={{ ...(active ? roseBtn : glass), flexShrink: 0, borderRadius: '16px', padding: '10px 14px', fontSize: '12px', fontWeight: 900, whiteSpace: 'nowrap', color: active ? '#fff' : T.label, cursor: 'pointer' }}
                   >
                     {t.emoji} {t.label}
                   </button>
@@ -508,24 +554,24 @@ export default function MemoriesAppScreen({ onBack }) {
                   <div style={{ ...roseBtn, width: '48px', height: '48px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <ImageIcon size={22} />
                   </div>
-                  <span style={{ fontSize: '13px', fontWeight: 900, color: INK }}>Tap to add a photo or video</span>
-                  <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#b0587a' }}>Photos are shrunk automatically. Videos up to 30 MB.</span>
+                  <span style={{ fontSize: '13px', fontWeight: 900, color: INK }}>{st('mAdd')}</span>
+                  <span style={{ fontSize: '10.5px', fontWeight: 700, color: T.soft }}>{st('mHint')}</span>
                 </>
               )}
               <input type="file" accept="image/*,video/*" onChange={handleMediaUpload} style={{ display: 'none' }} />
             </label>
 
             {editorUrl && (
-              <button type="button" onClick={removeMedia} style={{ alignSelf: 'flex-start', fontSize: '12px', fontWeight: 900, color: '#e11d48', padding: '4px 6px', cursor: 'pointer' }}>
-                Remove photo / video
+              <button type="button" onClick={removeMedia} style={{ alignSelf: 'flex-start', fontSize: '12px', fontWeight: 900, color: T.icon, padding: '4px 6px', cursor: 'pointer' }}>
+                {st('mRemove')}
               </button>
             )}
 
-            {mediaError && <div style={{ fontSize: '12px', fontWeight: 800, color: '#be123c' }}>{mediaError}</div>}
+            {mediaError && <div style={{ fontSize: '12px', fontWeight: 800, color: T.acc }}>{mediaError}</div>}
 
             <textarea
               className="mem-field"
-              placeholder="Write about this memory..."
+              placeholder={st('mDescPh')}
               value={currentMemory.desc}
               onChange={(e) => setCurrentMemory({ ...currentMemory, desc: e.target.value })}
               style={{ ...glass, flex: 1, minHeight: '140px', borderRadius: '22px', padding: '16px 18px', fontSize: '13.5px', fontWeight: 600, color: INK, lineHeight: 1.6, outline: 'none', resize: 'none' }}
@@ -554,32 +600,46 @@ export default function MemoriesAppScreen({ onBack }) {
                 <img src={viewerUrl} alt={activeViewer.title} style={{ maxHeight: '55vh', width: '100%', objectFit: 'contain', borderRadius: '18px' }} />
               )
             ) : viewerLoading ? (
-              <div style={{ margin: '40px 0 10px', fontSize: '13px', fontWeight: 800, color: 'rgba(255,255,255,0.7)' }}>Loading...</div>
+              <div style={{ margin: '40px 0 10px', fontSize: '13px', fontWeight: 800, color: 'rgba(255,255,255,0.7)' }}>{st('loading')}</div>
             ) : (
               <div style={{ fontSize: '64px', margin: '30px 0 10px', filter: 'drop-shadow(0 8px 12px rgba(0,0,0,0.4))' }}>{tagMeta(activeViewer.tag).emoji}</div>
             )}
             <div style={{ width: '100%', padding: '16px 18px 20px', color: '#fff', textAlign: 'center' }}>
               <h3 style={{ fontSize: '17px', fontWeight: 900 }}>{activeViewer.title}</h3>
               {activeViewer.desc && <p style={{ fontSize: '13px', fontWeight: 600, color: '#fecdd3', marginTop: '8px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{activeViewer.desc}</p>}
-              <p style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.55)', marginTop: '10px' }}>{prettyDate(activeViewer.date)}</p>
+              <p style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.55)', marginTop: '10px' }}>{prettyDate(activeViewer.date, loc)}</p>
             </div>
           </div>
 
           <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
             {viewerUrl ? (
-              <a href={viewerUrl} download={downloadName(activeViewer)} style={{ flex: 1, height: '48px', borderRadius: '16px', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontSize: '12.5px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none' }}>
-                <Download size={16} /> Download
+              <a
+                href={viewerUrl}
+                download={downloadName(activeViewer)}
+                onClick={async (e) => {
+                  // Android app me <a download> kaam nahi karta: file share sheet se save hoti hai
+                  if (!isNative()) return;
+                  e.preventDefault();
+                  try {
+                    const file = await getItemFile(activeViewer);
+                    if (file) await shareBlobNative(file, file.name, { title: activeViewer.title, dialogTitle: st('download') });
+                  } catch (err) {
+                    setToast(st('vNoSave'));
+                  }
+                }}
+                style={{ flex: 1, height: '48px', borderRadius: '16px', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontSize: '12.5px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none' }}>
+                <Download size={16} /> {st('download')}
               </a>
             ) : (
               <button onClick={(e) => handleShare(activeViewer, e)} style={{ flex: 1, height: '48px', borderRadius: '16px', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontSize: '12.5px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}>
-                <Share2 size={16} /> Share
+                <Share2 size={16} /> {st('share')}
               </button>
             )}
             <button onClick={() => openEdit(activeViewer)} style={{ flex: 1, height: '48px', borderRadius: '16px', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontSize: '12.5px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}>
-              <Pencil size={16} /> Edit
+              <Pencil size={16} /> {st('edit')}
             </button>
             <button onClick={(e) => deleteMemory(activeViewer.id, e)} style={{ ...roseBtn, flex: 1, height: '48px', borderRadius: '16px', fontSize: '12.5px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}>
-              <Trash2 size={16} /> Delete
+              <Trash2 size={16} /> {st('delete')}
             </button>
           </div>
         </div>

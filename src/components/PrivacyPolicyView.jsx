@@ -2,6 +2,7 @@ import React from 'react';
 import { Shield, Lock } from 'lucide-react';
 import { translations } from '../utils/translations';
 import LegalDoc from './LegalDoc';
+import { useScreenT } from '../utils/screenTexts';
 
 const EMAIL = 'lifeboxapp.dev@gmail.com';
 
@@ -116,6 +117,7 @@ const SECTIONS = [
 
 export default function PrivacyPolicyView({ currentTheme, currentLang }) {
   const t = translations[currentLang] || translations.en;
+  const { st, lang } = useScreenT();
   return (
     <LegalDoc
       dark={currentTheme === 'dark'}
@@ -124,10 +126,11 @@ export default function PrivacyPolicyView({ currentTheme, currentLang }) {
       iconColor="#f43f5e"
       title={t.privacy}
       badgeIcon={Lock}
-      badge="Local-first, private cloud after login"
+      badge={st('zPrivBadge')}
       badgeColor="#059669"
       updated="18 October 2026"
       intro="Life Box (“the App”, “we”, “us”) is developed and operated by Radhe Rocky Star (“the Developer”), India. This Privacy Policy explains what information the App handles, how it is used, and the choices you have. By using the App, you agree to this Policy."
+      noteLegal
       sections={SECTIONS}
     />
   );

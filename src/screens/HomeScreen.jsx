@@ -42,6 +42,31 @@ export default function HomeScreen({ onSubAppToggle, searchQuery = '' }) {
     appStorage.setItem('lifebox_vault', JSON.stringify(hiddenVault));
   }, [hiddenVault]);
 
+  // Notes card ka count: asli notes ki ginti (Notes screen jahan rakhti hai wahin se)
+  const readNoteCount = () => {
+    try {
+      const saved = appStorage.getItem('lifebox_keep_notes');
+      if (!saved) return 1; // Notes screen pehli baar ek Welcome note dikhati hai
+      const list = JSON.parse(saved);
+      return Array.isArray(list) ? list.length : 0;
+    } catch (err) {
+      return 0;
+    }
+  };
+  const [noteCount, setNoteCount] = useState(readNoteCount);
+
+  // Notes band hone par, ya Bin se restore hone par ginti dobara nikalo
+  useEffect(() => {
+    setNoteCount(readNoteCount());
+    const refresh = () => setNoteCount(readNoteCount());
+    window.addEventListener('newlife-vault-changed', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.removeEventListener('newlife-vault-changed', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [showNotesApp]);
+
   const isAnySubAppOpen = showNotesApp || showMemoriesApp || showGoalsApp || showVoicesApp || showAiChatApp || showLifeMeter;
 
   // Inform App.jsx when any sub-app is open/closed to hide outer headers/nav
@@ -133,7 +158,7 @@ export default function HomeScreen({ onSubAppToggle, searchQuery = '' }) {
         {show.ai && <AiAssistantCard onClick={() => setShowAiChatApp(true)} count={hiddenVault.length} />}
         {show.lifemeter && <LifeMeterCard onClick={() => setShowLifeMeter(true)} />}
         {show.memory && <MemoryCard onClick={() => setShowMemoriesApp(true)} t={t} />}
-        {show.notes && <NoteCard onClick={() => setShowNotesApp(true)} t={t} />}
+        {show.notes && <NoteCard onClick={() => setShowNotesApp(true)} t={t} noteCount={noteCount} />}
         {show.voice && <VoiceCard onClick={() => setShowVoicesApp(true)} t={t} />}
         {show.goal && <GoalCard onClick={() => setShowGoalsApp(true)} t={t} />}
       </div>

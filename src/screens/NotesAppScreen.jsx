@@ -3,6 +3,7 @@ import { ArrowLeft, Plus, Search, Trash2, Save, Sparkles, Star, Share2 } from 'l
 import { useBackHandler } from '../utils/useBackHandler';
 import { moveToBin } from '../utils/binStorage';
 import { appStorage } from '../utils/appStorage';
+import { useScreenT, tokensOf, glassOf, tintsOf } from '../utils/screenTexts';
 
 const NOTES_KEY = 'lifebox_keep_notes';
 const EMPTY_NOTE = { id: null, title: '', content: '', fav: false };
@@ -17,10 +18,10 @@ const todayLocal = () => {
   const d = new Date();
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
-const prettyDate = (str) => {
+const prettyDate = (str, loc = 'en-IN') => {
   const [y, m, d] = String(str || '').split('-').map(Number);
   if (!y || !m || !d) return str || '';
-  return new Date(y, m - 1, d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(y, m - 1, d).toLocaleDateString(loc, { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
 const loadNotes = () => {
@@ -35,13 +36,6 @@ const loadNotes = () => {
 };
 
 // ---------- design (Memories jaisa pink-white glossy glow) ----------
-const INK = '#3b0f24';
-const glass = {
-  background: 'linear-gradient(160deg,#ffffff 0%,rgba(255,255,255,0.82) 55%,rgba(255,234,243,0.96) 100%)',
-  border: '1px solid rgba(251,113,133,0.25)',
-  borderTop: '1px solid #ffffff',
-  boxShadow: 'inset 0 2px 0 #ffffff, inset 0 -9px 14px -10px rgba(244,63,94,0.25), 0 10px 22px -10px rgba(244,63,94,0.35), 0 0 22px -8px rgba(251,113,133,0.35)',
-};
 const roseBtn = {
   background: 'linear-gradient(160deg,#fb7185 0%,#e11d48 55%,#be123c 100%)',
   border: '1px solid rgba(255,255,255,0.5)',
@@ -55,25 +49,22 @@ const goldGlow = {
   boxShadow: 'inset 0 2px 0 #fffbe6, inset 0 -9px 14px -10px rgba(245,158,11,0.35), 0 10px 22px -10px rgba(245,158,11,0.5), 0 0 26px -4px rgba(251,191,36,0.6)',
 };
 
-// Har note ko halka alag pastel rang
-const TINTS = [
-  'linear-gradient(160deg,#ffffff 0%,#ffeaf3 100%)',
-  'linear-gradient(160deg,#ffffff 0%,#fff0e6 100%)',
-  'linear-gradient(160deg,#ffffff 0%,#f5ecff 100%)',
-  'linear-gradient(160deg,#ffffff 0%,#e9f9f0 100%)',
-  'linear-gradient(160deg,#ffffff 0%,#e8f3ff 100%)',
-];
-
 const CSS = `
 @keyframes noteRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes noteTwinkle{0%,100%{opacity:.7;transform:scale(1) rotate(0)}50%{opacity:1;transform:scale(1.2) rotate(12deg)}}
 .note-card{animation:noteRise .3s ease-out}
 .note-scroll::-webkit-scrollbar{width:0;height:0}
 .note-field::placeholder{color:rgba(190,24,93,.4)}
+[data-theme="dark"] .note-field::placeholder{color:rgba(253,164,175,.5)}
 .note-field:focus{border-color:rgba(244,63,94,.85)!important;box-shadow:0 0 0 3px rgba(244,63,94,.15),0 0 22px rgba(244,63,94,.25)!important}
 `;
 
 export default function NotesAppScreen({ onBack }) {
+  const { c, st, loc } = useScreenT();
+  const T = tokensOf(c);
+  const INK = c.text;
+  const glass = glassOf(c);
+  const TINTS = tintsOf(c);
   const [notes, setNotes] = useState(loadNotes);
   const [searchQuery, setSearchQuery] = useState('');
   const [onlyFav, setOnlyFav] = useState(false);
@@ -135,7 +126,7 @@ export default function NotesAppScreen({ onBack }) {
 
   // Back arrow / phone back: likha hua kho na jaye, isliye apne aap save (Google Keep jaisa)
   const closeEditor = () => {
-    if (persistCurrent()) setToast('Note saved');
+    if (persistCurrent()) setToast(st('nSaved'));
     setIsEditing(false);
   };
   useBackHandler(isEditing, closeEditor);
@@ -144,12 +135,12 @@ export default function NotesAppScreen({ onBack }) {
     e.preventDefault();
     const n = currentNoteRef.current;
     if (!(n.title || '').trim() && !(n.content || '').trim()) {
-      setToast('Write something first');
+      setToast(st('nWriteFirst'));
       return;
     }
     persistCurrent();
     setIsEditing(false);
-    setToast('Note saved');
+    setToast(st('nSaved'));
   };
 
   // Favourite: sirf dikhne ka order badalta hai, list ki asli jagah nahi.
@@ -159,7 +150,7 @@ export default function NotesAppScreen({ onBack }) {
     const target = notes.find((n) => n.id === id);
     if (!target) return;
     setNotes(notes.map((n) => (n.id === id ? { ...n, fav: !n.fav } : n)));
-    setToast(target.fav ? 'Removed from favourites' : 'Added to favourites ⭐');
+    setToast(target.fav ? st('nFavDel') : st('nFavAdd'));
   };
 
   // Delete note and push it to Trash / Bin Manager storage
@@ -170,11 +161,11 @@ export default function NotesAppScreen({ onBack }) {
 
     // Bin mein bhejo (restore par wapas Notes mein aayega, favourite ke saath)
     if (!moveToBin({ ...noteToDelete, type: 'Note' }, NOTES_KEY)) {
-      setToast('Could not move to Bin. Phone storage is full.');
+      setToast(st('binFail'));
       return;
     }
     setNotes(notes.filter((n) => n.id !== id));
-    setToast('Moved to Bin');
+    setToast(st('binMoved'));
   };
 
   const handleShare = async (note, e) => {
@@ -185,7 +176,7 @@ export default function NotesAppScreen({ onBack }) {
         await navigator.share({ title: note.title, text });
       } else {
         await navigator.clipboard.writeText(text);
-        setToast('Copied to clipboard');
+        setToast(st('copied'));
       }
     } catch (err) {
       // share cancel kiya to kuch nahi karna
@@ -225,7 +216,7 @@ export default function NotesAppScreen({ onBack }) {
       >
         <div>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px' }}>
-            <h4 className="line-clamp-1" style={{ fontSize: '13px', fontWeight: 900, color: '#be123c', flex: 1, minWidth: 0 }}>{note.title}</h4>
+            <h4 className="line-clamp-1" style={{ fontSize: '13px', fontWeight: 900, color: T.acc, flex: 1, minWidth: 0 }}>{note.title}</h4>
             <button
               type="button"
               onClick={(e) => toggleFav(note.id, e)}
@@ -242,15 +233,15 @@ export default function NotesAppScreen({ onBack }) {
               />
             </button>
           </div>
-          <p className="line-clamp-4" style={{ fontSize: '11.5px', fontWeight: 600, color: '#6f2f4b', lineHeight: 1.5, marginTop: '6px' }}>{note.content}</p>
+          <p className="line-clamp-4" style={{ fontSize: '11.5px', fontWeight: 600, color: T.mid, lineHeight: 1.5, marginTop: '6px' }}>{note.content}</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px', paddingTop: '8px', borderTop: '1px solid rgba(251,113,133,0.2)' }}>
-          <span style={{ fontSize: '9.5px', fontWeight: 800, color: '#b0587a' }}>{prettyDate(note.date)}</span>
+          <span style={{ fontSize: '9.5px', fontWeight: 800, color: T.soft }}>{prettyDate(note.date, loc)}</span>
           <div style={{ display: 'flex', gap: '4px' }}>
-            <button onClick={(e) => handleShare(note, e)} aria-label="Share" style={{ padding: '6px', borderRadius: '10px', color: '#e11d48', background: 'rgba(244,63,94,0.1)', cursor: 'pointer' }}>
+            <button onClick={(e) => handleShare(note, e)} aria-label="Share" style={{ padding: '6px', borderRadius: '10px', color: T.icon, background: 'rgba(244,63,94,0.1)', cursor: 'pointer' }}>
               <Share2 size={13} />
             </button>
-            <button onClick={(e) => deleteNote(note.id, e)} aria-label="Move to Bin" title="Move to Trash" style={{ padding: '6px', borderRadius: '10px', color: '#e11d48', background: 'rgba(244,63,94,0.1)', cursor: 'pointer' }}>
+            <button onClick={(e) => deleteNote(note.id, e)} aria-label="Move to Bin" title="Move to Trash" style={{ padding: '6px', borderRadius: '10px', color: T.icon, background: 'rgba(244,63,94,0.1)', cursor: 'pointer' }}>
               <Trash2 size={13} />
             </button>
           </div>
@@ -260,7 +251,7 @@ export default function NotesAppScreen({ onBack }) {
   };
 
   const sectionLabel = (text) => (
-    <div style={{ fontSize: '12px', fontWeight: 900, letterSpacing: '0.04em', color: '#a8264f', margin: '4px 4px 8px' }}>{text}</div>
+    <div style={{ fontSize: '12px', fontWeight: 900, letterSpacing: '0.04em', color: T.label, margin: '4px 4px 8px' }}>{text}</div>
   );
 
   return (
@@ -270,13 +261,13 @@ export default function NotesAppScreen({ onBack }) {
       {/* Header */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} aria-label="Back" style={{ ...glass, width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48', cursor: 'pointer' }}>
+          <button onClick={onBack} aria-label="Back" style={{ ...glass, width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.icon, cursor: 'pointer' }}>
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h2 style={{ fontSize: '21px', fontWeight: 900, color: INK, textShadow: '0 0 16px rgba(251,113,133,0.4)' }}>Life Box Notes</h2>
-            <p style={{ fontSize: '11.5px', fontWeight: 700, color: '#a8466c', marginTop: '2px' }}>
-              {notes.length === 0 ? 'Your secure personal notepad' : `${notes.length} ${notes.length === 1 ? 'note' : 'notes'}${favCount ? ` · ${favCount} favourite` : ''}`}
+            <h2 style={{ fontSize: '21px', fontWeight: 900, color: INK, textShadow: '0 0 16px rgba(251,113,133,0.4)' }}>{st('nTitle')}</h2>
+            <p style={{ fontSize: '11.5px', fontWeight: 700, color: T.sub, marginTop: '2px' }}>
+              {notes.length === 0 ? st('nSecure') : `${notes.length} ${notes.length === 1 ? st('nOne') : st('nMany')}${favCount ? ` · ${favCount} ${st('nFav')}` : ''}`}
             </p>
           </div>
         </div>
@@ -286,8 +277,8 @@ export default function NotesAppScreen({ onBack }) {
       </div>
 
       {storageFull && (
-        <div style={{ ...glass, borderRadius: '18px', padding: '12px 14px', border: '1px solid rgba(225,29,72,0.6)', fontSize: '12px', fontWeight: 800, color: '#be123c', lineHeight: 1.5 }}>
-          ⚠️ Phone storage for the app is full. Your latest change may not be saved. Delete some old notes or memories.
+        <div style={{ ...glass, borderRadius: '18px', padding: '12px 14px', border: '1px solid rgba(225,29,72,0.6)', fontSize: '12px', fontWeight: 800, color: T.acc, lineHeight: 1.5 }}>
+          {st('nFull')}
         </div>
       )}
 
@@ -297,7 +288,7 @@ export default function NotesAppScreen({ onBack }) {
         <input
           type="text"
           className="note-field"
-          placeholder="Search notes..."
+          placeholder={st('nSearch')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '13px', fontWeight: 700, color: INK }}
@@ -307,8 +298,8 @@ export default function NotesAppScreen({ onBack }) {
       {/* All / Favourites */}
       <div style={{ display: 'flex', gap: '8px' }}>
         {[
-          { key: false, label: '🌸 All' },
-          { key: true, label: '⭐ Favourites' },
+          { key: false, label: st('nAll') },
+          { key: true, label: st('nFavChip') },
         ].map((chip) => {
           const active = onlyFav === chip.key;
           return (
@@ -316,7 +307,7 @@ export default function NotesAppScreen({ onBack }) {
               key={chip.label}
               type="button"
               onClick={() => setOnlyFav(chip.key)}
-              style={{ ...(active ? roseBtn : glass), borderRadius: '16px', padding: '9px 16px', fontSize: '12px', fontWeight: 900, color: active ? '#fff' : '#a8264f', cursor: 'pointer' }}
+              style={{ ...(active ? roseBtn : glass), borderRadius: '16px', padding: '9px 16px', fontSize: '12px', fontWeight: 900, color: active ? '#fff' : T.label, cursor: 'pointer' }}
             >
               {chip.label}
             </button>
@@ -330,24 +321,24 @@ export default function NotesAppScreen({ onBack }) {
           <div style={{ ...glass, borderRadius: '28px', textAlign: 'center', padding: '44px 20px' }}>
             <div style={{ fontSize: '44px' }}>{onlyFav ? '⭐' : '📝'}</div>
             <div style={{ fontSize: '15px', fontWeight: 900, color: INK, marginTop: '8px' }}>
-              {onlyFav && notes.length > 0 && !searchQuery ? 'No favourites yet' : notes.length === 0 ? 'No notes yet' : 'Nothing found'}
+              {onlyFav && notes.length > 0 && !searchQuery ? st('nNoFav') : notes.length === 0 ? st('nNone') : st('nNothing')}
             </div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#a8466c', marginTop: '4px' }}>
-              {onlyFav && notes.length > 0 && !searchQuery ? 'Tap the star on a note to pin it to the top.' : notes.length === 0 ? 'Tap + to write your first note!' : 'Try another word.'}
+            <div style={{ fontSize: '12px', fontWeight: 700, color: T.sub, marginTop: '4px' }}>
+              {onlyFav && notes.length > 0 && !searchQuery ? st('nTapStar') : notes.length === 0 ? st('nTapPlus') : st('nTry')}
             </div>
           </div>
         ) : (
           <>
             {favNotes.length > 0 && (
               <>
-                {!onlyFav && sectionLabel('⭐ FAVOURITES')}
+                {!onlyFav && sectionLabel(st('nSecFav'))}
                 <div className="grid grid-cols-2 gap-3">{favNotes.map(renderCard)}</div>
               </>
             )}
             {otherNotes.length > 0 && (
               <>
                 {favNotes.length > 0 && <div style={{ height: '16px' }} />}
-                {favNotes.length > 0 && sectionLabel('ALL NOTES')}
+                {favNotes.length > 0 && sectionLabel(st('nSecAll'))}
                 <div className="grid grid-cols-2 gap-3">{otherNotes.map(renderCard)}</div>
               </>
             )}
@@ -369,12 +360,12 @@ export default function NotesAppScreen({ onBack }) {
 
       {/* Full Edit / Create Note View */}
       {isEditing && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', flexDirection: 'column', padding: '18px', background: 'radial-gradient(90% 40% at 0% 0%,rgba(251,113,133,.28),transparent 60%),radial-gradient(80% 40% at 100% 100%,rgba(244,114,182,.28),transparent 62%),linear-gradient(180deg,#fff8fb,#ffeaf3)' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', flexDirection: 'column', padding: '18px', background: c.isDark ? c.pageBg : 'radial-gradient(90% 40% at 0% 0%,rgba(251,113,133,.28),transparent 60%),radial-gradient(80% 40% at 100% 100%,rgba(244,114,182,.28),transparent 62%),linear-gradient(180deg,#fff8fb,#ffeaf3)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexShrink: 0, gap: '8px' }}>
-            <button onClick={closeEditor} aria-label="Back" style={{ ...glass, width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48', cursor: 'pointer' }}>
+            <button onClick={closeEditor} aria-label="Back" style={{ ...glass, width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.icon, cursor: 'pointer' }}>
               <ArrowLeft size={20} />
             </button>
-            <h3 style={{ fontSize: '15px', fontWeight: 900, color: INK, flex: 1, textAlign: 'center' }}>{currentNote.id ? 'Edit Note' : 'New Note'}</h3>
+            <h3 style={{ fontSize: '15px', fontWeight: 900, color: INK, flex: 1, textAlign: 'center' }}>{currentNote.id ? st('nEditT') : st('nNewT')}</h3>
             <button
               type="button"
               onClick={() => setCurrentNote({ ...currentNote, fav: !currentNote.fav })}
@@ -384,7 +375,7 @@ export default function NotesAppScreen({ onBack }) {
               <Star size={20} style={currentNote.fav ? { color: '#f59e0b', fill: '#fbbf24', filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.9))' } : { color: '#d4a0b4' }} />
             </button>
             <button onClick={handleSaveNote} style={{ ...roseBtn, height: '44px', padding: '0 18px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 900, cursor: 'pointer' }}>
-              <Save size={16} /> Save
+              <Save size={16} /> {st('save')}
             </button>
           </div>
 
@@ -392,20 +383,20 @@ export default function NotesAppScreen({ onBack }) {
             <input
               type="text"
               className="note-field"
-              placeholder="Note title..."
+              placeholder={st('nTitlePh')}
               value={currentNote.title}
               onChange={(e) => setCurrentNote({ ...currentNote, title: e.target.value })}
               style={{ ...glass, borderRadius: '20px', padding: '15px 18px', fontSize: '16px', fontWeight: 900, color: INK, outline: 'none' }}
             />
             <textarea
               className="note-field"
-              placeholder="Write your note details here..."
+              placeholder={st('nBodyPh')}
               value={currentNote.content}
               onChange={(e) => setCurrentNote({ ...currentNote, content: e.target.value })}
               style={{ ...glass, flex: 1, minHeight: 0, borderRadius: '22px', padding: '16px 18px', fontSize: '14px', fontWeight: 600, color: INK, lineHeight: 1.65, outline: 'none', resize: 'none' }}
             />
-            <div style={{ textAlign: 'right', fontSize: '10.5px', fontWeight: 800, color: '#b0587a', flexShrink: 0 }}>
-              {(currentNote.content || '').trim() ? (currentNote.content.trim().split(/\s+/).length) : 0} words · {(currentNote.content || '').length} characters
+            <div style={{ textAlign: 'right', fontSize: '10.5px', fontWeight: 800, color: T.soft, flexShrink: 0 }}>
+              {(currentNote.content || '').trim() ? (currentNote.content.trim().split(/\s+/).length) : 0} {st('words')} · {(currentNote.content || '').length} {st('chars')}
             </div>
           </div>
         </div>

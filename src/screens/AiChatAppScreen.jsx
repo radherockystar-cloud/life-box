@@ -11,6 +11,7 @@ import {
 } from '../utils/aiChatHelpers';
 import { appStorage } from '../utils/appStorage';
 import { useEntitlements, consumeAiMessage, openPlans } from '../utils/billing';
+import { useScreenT, tokensOf, glassOf } from '../utils/screenTexts';
 
 const CHATS_KEY = 'lifebox_ai_chats'; // saari purani chats (history)
 const OLD_CHAT_KEY = 'lifebox_ai_chat'; // pehle wale version ki ek chat
@@ -38,8 +39,8 @@ const loadChats = () => {
   return [];
 };
 
-const formatWhen = (ts) =>
-  new Date(ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+const formatWhen = (ts, loc = 'en-IN') =>
+  new Date(ts).toLocaleString(loc, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
 // AI jawab ki shikayat (Play Store AI-content policy): feedback wale web3forms se email aati hai
 const reportReply = async (aiText, userText) => {
@@ -74,22 +75,13 @@ const CSS = `
 @keyframes lbRise{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
 .lb-msg{animation:lbRise .28s ease-out}
 .lb-input::placeholder{color:rgba(190,24,93,.45)}
+[data-theme="dark"] .lb-input::placeholder{color:rgba(253,164,175,.5)}
 .lb-input:focus{border-color:rgba(244,63,94,.85)!important;box-shadow:0 0 0 3px rgba(244,63,94,.16),0 0 26px rgba(244,63,94,.28)!important}
 .lb-scroll::-webkit-scrollbar{width:0;height:0}
 `;
 
-const INK = '#3b0f24'; // gehra rose-brown text
-
 const ROOT_BG =
   'radial-gradient(90% 42% at 0% 0%,rgba(251,113,133,.30) 0%,transparent 60%),radial-gradient(80% 45% at 100% 22%,rgba(244,114,182,.30) 0%,transparent 62%),radial-gradient(80% 40% at 50% 100%,rgba(251,146,190,.30) 0%,transparent 65%),linear-gradient(180deg,#fff8fb 0%,#ffeaf3 55%,#ffdfee 100%)';
-
-// Glossy white-pink glass
-const glass = {
-  background: 'linear-gradient(160deg,#ffffff 0%,rgba(255,255,255,0.80) 55%,rgba(255,232,242,0.95) 100%)',
-  border: '1px solid rgba(251,113,133,0.28)',
-  borderTop: '1px solid #ffffff',
-  boxShadow: 'inset 0 2px 0 #ffffff, inset 0 -9px 14px -10px rgba(244,63,94,0.28), 0 10px 22px -10px rgba(244,63,94,0.38), 0 0 24px -6px rgba(251,113,133,0.4)',
-};
 
 const roseBtn = {
   background: 'linear-gradient(160deg,#fb7185 0%,#e11d48 55%,#be123c 100%)',
@@ -113,8 +105,6 @@ const avatarStyle = {
 };
 
 const bubbleBase = { padding: '12px 15px', maxWidth: '82%', fontSize: '13.5px', fontWeight: 600, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' };
-const aiBubble = { ...glass, ...bubbleBase, color: INK, borderRadius: '20px 20px 20px 6px' };
-const errBubble = { ...aiBubble, border: '1px solid rgba(225,29,72,0.65)', boxShadow: `${glass.boxShadow}, 0 0 20px -2px rgba(244,63,94,0.55)` };
 const userBubble = {
   ...bubbleBase,
   color: '#fff',
@@ -144,6 +134,12 @@ const text3dMid = {
 };
 
 export default function AiChatAppScreen({ onBack }) {
+  const { c, st, loc } = useScreenT();
+  const T = tokensOf(c);
+  const INK = c.text;
+  const glass = glassOf(c);
+  const aiBubble = { ...glass, ...bubbleBase, color: INK, borderRadius: '20px 20px 20px 6px' };
+  const errBubble = { ...aiBubble, border: '1px solid rgba(225,29,72,0.65)', boxShadow: `${glass.boxShadow}, 0 0 20px -2px rgba(244,63,94,0.55)` };
   // Har baar screen khulne par nayi (khaali) chat. Purani chats History mein milti hain.
   const [messages, setMessages] = useState([]);
   const [chats, setChats] = useState(loadChats);
@@ -229,7 +225,7 @@ export default function AiChatAppScreen({ onBack }) {
   };
 
   const deleteChat = (chat) => {
-    if (!window.confirm('Delete this chat?')) return;
+    if (!window.confirm(st('aiDeleteChat'))) return;
     persistChats(chatsRef.current.filter((c) => c.id !== chat.id));
     if (chatIdRef.current === chat.id) {
       chatIdRef.current = null;
@@ -239,7 +235,7 @@ export default function AiChatAppScreen({ onBack }) {
 
   const handleReport = async (idx) => {
     if (reported[idx] === 'sending' || reported[idx] === 'done') return;
-    if (!window.confirm('Report this AI reply as harmful or incorrect?')) return;
+    if (!window.confirm(st('aiReportConfirm'))) return;
     setReported((r) => ({ ...r, [idx]: 'sending' }));
     const prevUser = [...messages.slice(0, idx)].reverse().find((x) => x.sender === 'user');
     const ok = await reportReply(messages[idx].text, prevUser?.text);
@@ -357,7 +353,7 @@ export default function AiChatAppScreen({ onBack }) {
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: ROOT_BG, color: INK }}
+      style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: c.isDark ? c.pageBg : ROOT_BG, color: INK }}
     >
       <style>{CSS}</style>
 
@@ -370,7 +366,7 @@ export default function AiChatAppScreen({ onBack }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,238,246,0.96))',
+          background: c.isDark ? c.headerBg : 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,238,246,0.96))',
           borderBottom: '1px solid rgba(251,113,133,0.25)',
           boxShadow: '0 12px 28px -14px rgba(244,63,94,0.5)',
         }}
@@ -380,12 +376,12 @@ export default function AiChatAppScreen({ onBack }) {
             type="button"
             onClick={() => setHistoryOpen(true)}
             aria-label="Chat history"
-            style={{ ...glass, width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48', flexShrink: 0, cursor: 'pointer' }}
+            style={{ ...glass, width: '44px', height: '44px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.icon, flexShrink: 0, cursor: 'pointer' }}
           >
             <History size={20} />
           </button>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '15px', fontWeight: 900, color: INK, textShadow: '0 0 16px rgba(251,113,133,0.45)' }}>AI Life Assistant</div>
+            <div style={{ fontSize: '15px', fontWeight: 900, color: INK, textShadow: '0 0 16px rgba(251,113,133,0.45)' }}>{st('aiTitle')}</div>
             <div
               style={{
                 fontSize: '10.5px',
@@ -397,7 +393,7 @@ export default function AiChatAppScreen({ onBack }) {
                 color: 'transparent',
               }}
             >
-              Life Box Pro Mode
+              {st('aiMode')}
             </div>
           </div>
         </div>
@@ -438,10 +434,10 @@ export default function AiChatAppScreen({ onBack }) {
                 <Bot size={50} style={{ filter: 'drop-shadow(0 4px 6px rgba(80,0,40,0.4))' }} />
               </div>
             </div>
-            <div style={{ ...text3dBig, marginTop: '34px' }}>Hey! 👋</div>
-            <div style={{ ...text3dMid, marginTop: '12px' }}>I&apos;m your Life Box friend</div>
-            <p style={{ marginTop: '22px', maxWidth: '300px', fontSize: '13px', fontWeight: 700, lineHeight: 1.65, color: '#8a3358' }}>
-              Chat with me about anything.
+            <div style={{ ...text3dBig, marginTop: '34px' }}>{st('aiHey')}</div>
+            <div style={{ ...text3dMid, marginTop: '12px' }}>{st('aiFriend')}</div>
+            <p style={{ marginTop: '22px', maxWidth: '300px', fontSize: '13px', fontWeight: 700, lineHeight: 1.65, color: T.sub }}>
+              {st('aiChatAny')}
             </p>
           </div>
         )}
@@ -461,10 +457,10 @@ export default function AiChatAppScreen({ onBack }) {
                   type="button"
                   onClick={() => handleReport(idx)}
                   disabled={reported[idx] === 'sending' || reported[idx] === 'done'}
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px', padding: 0, fontSize: '10.5px', fontWeight: 800, color: '#b0587a', cursor: 'pointer', background: 'transparent', border: 'none' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px', padding: 0, fontSize: '10.5px', fontWeight: 800, color: T.soft, cursor: 'pointer', background: 'transparent', border: 'none' }}
                 >
                   <Flag size={11} />
-                  {reported[idx] === 'done' ? 'Reported. Thank you!' : reported[idx] === 'sending' ? 'Sending...' : reported[idx] === 'fail' ? 'Could not send. Tap to retry' : 'Report this reply'}
+                  {reported[idx] === 'done' ? st('aiReported') : reported[idx] === 'sending' ? st('aiSending') : reported[idx] === 'fail' ? st('aiRetry') : st('aiReport')}
                 </button>
               )}
             </div>
@@ -510,8 +506,8 @@ export default function AiChatAppScreen({ onBack }) {
         <div style={{ padding: '0 12px 8px', flexShrink: 0 }}>
           <div style={{ ...glass, display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '18px' }}>
             <img src={selectedImage} alt="Preview" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '12px' }} />
-            <span style={{ fontSize: '11px', fontWeight: 800, color: INK }}>Photo attached</span>
-            <button type="button" onClick={() => setSelectedImage(null)} aria-label="Remove photo" style={{ padding: '5px', borderRadius: '50%', background: 'rgba(244,63,94,0.15)', color: '#e11d48', cursor: 'pointer' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: INK }}>{st('aiPhoto')}</span>
+            <button type="button" onClick={() => setSelectedImage(null)} aria-label="Remove photo" style={{ padding: '5px', borderRadius: '50%', background: 'rgba(244,63,94,0.15)', color: T.icon, cursor: 'pointer' }}>
               <X size={14} />
             </button>
           </div>
@@ -542,7 +538,7 @@ export default function AiChatAppScreen({ onBack }) {
               onClick={openPlans}
               style={{ flexShrink: 0, padding: '6px 12px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '11.5px', fontWeight: 900, color: '#fff', background: 'linear-gradient(160deg, #fb7185 0%, #e11d48 55%, #be123c 100%)' }}
             >
-              {aiLocked ? 'Get Pro' : 'See plans'}
+              {aiLocked ? st('aiGetPro') : st('aiSeePlans')}
             </button>
           )}
         </div>
@@ -557,12 +553,12 @@ export default function AiChatAppScreen({ onBack }) {
           alignItems: 'center',
           gap: '10px',
           padding: '12px 12px calc(12px + env(safe-area-inset-bottom, 0px))',
-          background: 'linear-gradient(180deg, rgba(255,238,246,0.97), rgba(255,255,255,0.99))',
+          background: c.isDark ? c.headerBg : 'linear-gradient(180deg, rgba(255,238,246,0.97), rgba(255,255,255,0.99))',
           borderTop: '1px solid rgba(251,113,133,0.25)',
           boxShadow: '0 -12px 28px -14px rgba(244,63,94,0.45)',
         }}
       >
-        <label style={{ ...glass, width: '46px', height: '46px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48', cursor: 'pointer', flexShrink: 0 }}>
+        <label style={{ ...glass, width: '46px', height: '46px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.icon, cursor: 'pointer', flexShrink: 0 }}>
           <ImagePlus size={20} />
           <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
         </label>
@@ -571,7 +567,7 @@ export default function AiChatAppScreen({ onBack }) {
           type="text"
           className="lb-input"
           maxLength={1200}
-          placeholder="Ask me anything..."
+          placeholder={st('aiPh')}
           value={inputVal}
           onChange={(e) => setInputVal(e.target.value)}
           style={{
@@ -585,7 +581,7 @@ export default function AiChatAppScreen({ onBack }) {
             fontSize: '13.5px',
             fontWeight: 600,
             color: INK,
-            background: '#ffffff',
+            background: c.isDark ? c.inputBg : '#ffffff',
             border: '1px solid rgba(251,113,133,0.4)',
             boxShadow: 'inset 0 2px 6px rgba(244,63,94,0.14)',
           }}
@@ -611,27 +607,27 @@ export default function AiChatAppScreen({ onBack }) {
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
-              background: 'linear-gradient(180deg,#ffffff 0%,#ffeef5 100%)',
+              background: c.isDark ? c.drawerBg : 'linear-gradient(180deg,#ffffff 0%,#ffeef5 100%)',
               borderRight: '1px solid rgba(251,113,133,0.35)',
               boxShadow: '12px 0 40px rgba(190,18,60,0.3), 0 0 40px rgba(251,113,133,0.35)',
             }}
           >
             <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(251,113,133,0.2)', flexShrink: 0 }}>
-              <div style={{ fontSize: '17px', fontWeight: 900, color: INK, textShadow: '0 0 16px rgba(251,113,133,0.45)' }}>Chat history</div>
-              <button type="button" onClick={() => setHistoryOpen(false)} aria-label="Close" style={{ ...glass, width: '38px', height: '38px', borderRadius: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48', cursor: 'pointer' }}>
+              <div style={{ fontSize: '17px', fontWeight: 900, color: INK, textShadow: '0 0 16px rgba(251,113,133,0.45)' }}>{st('aiHistory')}</div>
+              <button type="button" onClick={() => setHistoryOpen(false)} aria-label="Close" style={{ ...glass, width: '38px', height: '38px', borderRadius: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.icon, cursor: 'pointer' }}>
                 <X size={18} />
               </button>
             </div>
 
             <div style={{ padding: '12px', flexShrink: 0 }}>
               <button type="button" onClick={startNewChat} style={{ ...roseBtn, width: '100%', padding: '13px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px', fontWeight: 900, cursor: 'pointer' }}>
-                <Plus size={17} /> New chat
+                <Plus size={17} /> {st('aiNewChat')}
               </button>
             </div>
 
             <div className="lb-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 12px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {chats.length === 0 && (
-                <p style={{ textAlign: 'center', marginTop: '40px', fontSize: '12px', fontWeight: 700, color: '#b0587a' }}>No chats yet. Say hi to start one!</p>
+                <p style={{ textAlign: 'center', marginTop: '40px', fontSize: '12px', fontWeight: 700, color: T.soft }}>{st('aiNoChats')}</p>
               )}
               {chats.map((chat) => {
                 const active = chat.id === chatIdRef.current;
@@ -650,9 +646,9 @@ export default function AiChatAppScreen({ onBack }) {
                   >
                     <button type="button" onClick={() => openChat(chat)} style={{ flex: 1, minWidth: 0, textAlign: 'left', color: INK, cursor: 'pointer' }}>
                       <div style={{ fontSize: '13px', fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chat.title}</div>
-                      <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#b0587a', marginTop: '3px' }}>{formatWhen(chat.updatedAt)}</div>
+                      <div style={{ fontSize: '10.5px', fontWeight: 700, color: T.soft, marginTop: '3px' }}>{formatWhen(chat.updatedAt, loc)}</div>
                     </button>
-                    <button type="button" onClick={() => deleteChat(chat)} aria-label="Delete chat" style={{ padding: '9px', borderRadius: '12px', color: '#e11d48', background: 'rgba(244,63,94,0.1)', cursor: 'pointer', flexShrink: 0 }}>
+                    <button type="button" onClick={() => deleteChat(chat)} aria-label="Delete chat" style={{ padding: '9px', borderRadius: '12px', color: T.icon, background: 'rgba(244,63,94,0.1)', cursor: 'pointer', flexShrink: 0 }}>
                       <Trash2 size={16} />
                     </button>
                   </div>

@@ -2,14 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import {
-  canNotify,
   isNotifEnabled,
   setNotifEnabled,
   getNotificationPermission,
   requestNotificationPermission,
   cancelAllNotifications,
   syncNotifications,
-  sendTestNotification,
 } from '../../tabs/planner/reminderService';
 
 // Master notification switch.
@@ -67,25 +65,6 @@ export default function NotificationManager() {
     }
   };
 
-  const handleTest = async () => {
-    setMessage('');
-    if (!enabled) {
-      setMessage(t.notifNeedEnable);
-      return;
-    }
-    if (!canNotify()) {
-      setMessage(t.notifAppOnly);
-      return;
-    }
-    try {
-      const sent = await sendTestNotification();
-      setMessage(sent ? t.notifTestSent : t.notifDenied);
-    } catch (err) {
-      console.error('Test notification failed:', err);
-      setMessage(t.notifTestFailed);
-    }
-  };
-
   const statusText = !enabled
     ? t.notifStatusOff
     : permission === 'denied' || permission === 'prompt'
@@ -130,13 +109,6 @@ export default function NotificationManager() {
       <p style={{ fontSize: '11px', color: c.inkMuted, fontWeight: '700', lineHeight: 1.5 }}>
         {enabled ? t.notifOnInfo : t.notifOffInfo}
       </p>
-
-      <button
-        onClick={handleTest}
-        style={{ width: '100%', padding: '12px', borderRadius: '14px', background: c.isDark ? c.accentSoft : '#fef2f2', border: '1px solid ' + (c.isDark ? c.accentLine : '#fee2e2'), color: '#f43f5e', fontSize: '12px', fontWeight: '900', cursor: 'pointer', opacity: enabled ? 1 : 0.6 }}
-      >
-        {t.notifSend}
-      </button>
 
       {message && (
         <p style={{ fontSize: '11px', color: c.inkSoft, fontWeight: '700', lineHeight: 1.5 }}>{message}</p>

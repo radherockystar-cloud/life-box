@@ -4,19 +4,11 @@ import { useBackHandler } from '../utils/useBackHandler';
 import { moveToBin } from '../utils/binStorage';
 import { saveMedia, deleteMedia, getMediaUrl } from '../utils/mediaStore';
 import { appStorage } from '../utils/appStorage';
+import { useScreenT, tintsOf } from '../utils/screenTexts';
 
 const MAX_AUDIO_BYTES = 50 * 1024 * 1024; // 50 MB (export file badi na ho isliye limit)
 
 /* ---------------------------- pink-white glossy glow theme, Notes jaisa (CSS) ---------------------------- */
-
-// Har card ko halka alag pastel rang (Notes jaisa)
-const TINTS = [
-  'linear-gradient(160deg,#ffffff 0%,#ffeaf3 100%)',
-  'linear-gradient(160deg,#ffffff 0%,#fff0e6 100%)',
-  'linear-gradient(160deg,#ffffff 0%,#f5ecff 100%)',
-  'linear-gradient(160deg,#ffffff 0%,#e9f9f0 100%)',
-  'linear-gradient(160deg,#ffffff 0%,#e8f3ff 100%)',
-];
 
 const THEME_CSS = `/* ====== pink-white glossy glow theme (Notes / Memories jaisa) ======
    Rang badalne ho to sirf yeh CSS badlo. Koi blur ya bhaari animation nahi, taaki phone halka rahe. */
@@ -100,6 +92,25 @@ const THEME_CSS = `/* ====== pink-white glossy glow theme (Notes / Memories jais
 .vx-drop:active{transform:scale(.985);}
 .vx-uptile{padding:16px;border-radius:20px;color:#fff;background:linear-gradient(160deg,#fb7185 0%,#e11d48 55%,#9d174d 100%);
   border:1px solid rgba(255,255,255,.5);border-top:1px solid rgba(255,255,255,.85);box-shadow:var(--r-sh);}
+
+/* ---- Dark theme (Settings me dark chunne par) ---- */
+[data-theme="dark"] .vx-root{color:#f9fafb;
+  --g-bg:linear-gradient(160deg,#1e293b 0%,#172033 100%);--g-bd:rgba(251,113,133,.25);
+  --g-sh:inset 0 1px 0 rgba(255,255,255,.06),0 10px 22px -10px rgba(0,0,0,.6);}
+[data-theme="dark"] .vx-root .vx-icon,[data-theme="dark"] .vx-root .vx-badge,[data-theme="dark"] .vx-root .vx-input,[data-theme="dark"] .vx-root .vx-ghost,
+[data-theme="dark"] .vx-root .vx-card,[data-theme="dark"] .vx-root .vx-ctl,[data-theme="dark"] .vx-root .vx-speed{border-top-color:rgba(255,255,255,.1);}
+[data-theme="dark"] .vx-root .vx-title{color:#f9fafb;}
+[data-theme="dark"] .vx-root .vx-muted{color:#fda4af;}
+[data-theme="dark"] .vx-root .vx-input{color:#f9fafb;color-scheme:dark;}
+[data-theme="dark"] .vx-root input::placeholder{color:rgba(253,164,175,.5);}
+[data-theme="dark"] .vx-root .vx-ghost,[data-theme="dark"] .vx-root .vx-speed,[data-theme="dark"] .vx-root .vx-pill{color:#fda4af;}
+[data-theme="dark"] .vx-root .vx-ctl{color:#fb7185;}
+[data-theme="dark"] .vx-root .vx-bg{background:#0f172a;color:#f9fafb;}
+[data-theme="dark"] .vx-root .vx-sheet{background:#1e293b;color:#f9fafb;border-top-color:rgba(255,255,255,.1);box-shadow:0 -18px 50px -12px rgba(0,0,0,.6);}
+[data-theme="dark"] .vx-root .vx-drop{color:#f9fafb;}
+[data-theme="dark"] .vx-root .text-\\[\\#3b0f24\\]{color:#f9fafb;}
+[data-theme="dark"] .vx-root .text-\\[\\#be123c\\],[data-theme="dark"] .vx-root .text-\\[\\#a8466c\\]{color:#fda4af;}
+[data-theme="dark"] .vx-root .text-\\[\\#b0587a\\]{color:#94a3b8;}
 `;
 
 const WAVE_BARS = [40, 70, 30, 90, 60, 100, 50, 80, 40, 70];
@@ -109,6 +120,8 @@ const RATES = [1, 1.25, 1.5, 2, 0.75];
 const miniBars = (seed) => Array.from({ length: 20 }, (_, i) => 28 + (((Number(seed) % 9973) * (i + 3) * 31) % 72));
 
 export default function VoicesAppScreen({ onBack }) {
+  const { c, st } = useScreenT();
+  const TINTS = tintsOf(c);
   const [voices, setVoices] = useState(() => {
     try {
       const saved = appStorage.getItem('newlife_vault');
@@ -173,7 +186,7 @@ export default function VoicesAppScreen({ onBack }) {
     e.target.value = '';
     if (!file) return;
     if (file.size > MAX_AUDIO_BYTES) {
-      showToast('⚠️ This file is too big. Please pick one under 50 MB.');
+      showToast(st('vBig'));
       return;
     }
     setIsReading(true);
@@ -184,7 +197,7 @@ export default function VoicesAppScreen({ onBack }) {
       audioKey = await saveMedia(file);
     } catch (err) {
       setIsReading(false);
-      showToast('⚠️ Could not save this file on your phone.');
+      showToast(st('vNoSave'));
       return;
     }
 
@@ -211,14 +224,14 @@ export default function VoicesAppScreen({ onBack }) {
       } catch (err) {
         deleteMedia(audioKey).catch(() => {});
         setIsReading(false);
-        showToast('⚠️ Storage is full. Try a smaller file or delete old voices.');
+        showToast(st('vFull'));
         return;
       }
 
       setVoices(prev => [newEntry, ...prev]);
       setIsUploadModal(false);
       setIsReading(false);
-      showToast('🎧 Voice added to your vault.');
+      showToast(st('vAddedT'));
     };
 
     // Asli duration padho (pehle har file "30 sec" maani jaati thi)
@@ -245,12 +258,12 @@ export default function VoicesAppScreen({ onBack }) {
 
     // Bin me bhejo (restore par wapas Voices me aayega)
     if (!moveToBin(itemToDelete, 'newlife_vault')) {
-      showToast('⚠️ Could not move to Bin. Storage is full, free some space first.');
+      showToast(st('vBinFail'));
       return;
     }
     setVoices(voices.filter(v => v.id !== id));
     closePlayer();
-    showToast('🗑️ Voice moved to Bin.');
+    showToast(st('vBinned'));
   };
 
   const handleShare = (item, e) => {
@@ -258,7 +271,7 @@ export default function VoicesAppScreen({ onBack }) {
     if (navigator.share) {
       navigator.share({
         title: item.title,
-        text: `Check out my voice note: ${item.title}`
+        text: st('vShare', { t: item.title })
       }).catch(() => {});
     } else {
       showToast(`Voice note "${item.title}" ready to share!`);
@@ -310,7 +323,7 @@ export default function VoicesAppScreen({ onBack }) {
       audio.play().then(() => {
         setIsPlaying(true);
       }).catch(() => {
-        showToast('⚠️ Playback error: Unable to play audio source.');
+        showToast(st('vPlayErr'));
         setIsPlaying(false);
       });
     } else {
@@ -378,8 +391,8 @@ export default function VoicesAppScreen({ onBack }) {
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h2 className="vx-title text-[21px]">Life Box Voices</h2>
-              <p className="vx-muted mt-0.5 text-[11.5px] font-bold">Your uploaded audio & ideas</p>
+              <h2 className="vx-title text-[21px]">{st('vTitle')}</h2>
+              <p className="vx-muted mt-0.5 text-[11.5px] font-bold">{st('vSub')}</p>
             </div>
           </div>
           <div className="vx-badge">
@@ -392,7 +405,7 @@ export default function VoicesAppScreen({ onBack }) {
           <Search size={18} className="shrink-0 text-[#f43f5e]" />
           <input
             type="text"
-            placeholder="Search voice thoughts..."
+            placeholder={st('vSearch')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-transparent text-[13px] font-bold text-[#3b0f24] outline-none placeholder:text-[rgba(190,24,93,0.4)]"
@@ -404,7 +417,7 @@ export default function VoicesAppScreen({ onBack }) {
           {filteredVoices.length === 0 ? (
             <div className="vx-card px-5 py-11 text-center">
               <div className="text-[44px]">🎙️</div>
-              <div className="vx-muted mt-2 text-sm font-bold">No audio files found. Tap + to upload one!</div>
+              <div className="vx-muted mt-2 text-sm font-bold">{st('vNone')}</div>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
@@ -417,11 +430,11 @@ export default function VoicesAppScreen({ onBack }) {
                 >
                   <div className="space-y-2">
                     <span className="vx-pill inline-flex items-center gap-1">
-                      <FileAudio size={10} /> Audio File
+                      <FileAudio size={10} /> {st('vAudio')}
                     </span>
                     <h4 className="line-clamp-2 text-[13px] font-black leading-snug text-[#be123c]">{item.title}</h4>
                     <p className="flex items-center gap-1 text-[11px] font-bold text-[#a8466c]">
-                      <Play size={10} /> {item.duration}
+                      <Play size={10} /> {item.duration === 'Audio file' ? st('vAudio') : item.duration}
                     </p>
                   </div>
 
@@ -469,7 +482,7 @@ export default function VoicesAppScreen({ onBack }) {
 
             <div className="flex items-center justify-between">
               <span className="vx-pill flex items-center gap-1.5 !px-3 !py-1 !text-[11px]">
-                <Activity size={12} className={isPlaying ? 'animate-pulse' : ''} /> Now Playing
+                <Activity size={12} className={isPlaying ? 'animate-pulse' : ''} /> {st('vNow')}
               </span>
               <button onClick={closePlayer} className="vx-icon vx-icon-sm" aria-label="Close">
                 <X size={18} />
@@ -500,7 +513,7 @@ export default function VoicesAppScreen({ onBack }) {
 
             <div className="space-y-1 text-center">
               <h3 className="vx-title break-words text-lg">{activePlayerItem.title}</h3>
-              <p className="text-xs font-bold text-[#a8466c]">Added on {activePlayerItem.date}</p>
+              <p className="text-xs font-bold text-[#a8466c]">{st('vAdded', { d: activePlayerItem.date })}</p>
             </div>
 
             {/* Seekbar */}
@@ -548,7 +561,7 @@ export default function VoicesAppScreen({ onBack }) {
             </div>
 
             <button onClick={closePlayer} className="vx-ghost w-full py-3.5 text-sm">
-              Close Player
+              {st('vClose')}
             </button>
           </div>
         </div>
@@ -561,7 +574,7 @@ export default function VoicesAppScreen({ onBack }) {
             <button onClick={() => setIsUploadModal(false)} className="vx-icon" aria-label="Back">
               <ArrowLeft size={20} />
             </button>
-            <h3 className="vx-title text-[15px]">Upload Audio File</h3>
+            <h3 className="vx-title text-[15px]">{st('vUpload')}</h3>
             <div className="w-[44px]" />
           </div>
 
@@ -571,13 +584,13 @@ export default function VoicesAppScreen({ onBack }) {
                 {isReading ? <Loader2 size={28} className="animate-spin" /> : <Upload size={28} />}
               </div>
               <span className="text-sm font-black">
-                {isReading ? 'Adding your voice...' : 'Tap to select audio file from phone'}
+                {isReading ? st('vAdding') : st('vSelect')}
               </span>
-              <span className="text-[11px] font-bold text-[#a8466c]">MP3, WAV, AAC supported</span>
+              <span className="text-[11px] font-bold text-[#a8466c]">{st('vFmt')}</span>
               <input type="file" accept="audio/*" onChange={handleFileUpload} disabled={isReading} className="hidden" />
             </label>
             <p className="vx-muted max-w-xs text-center text-[11px] font-semibold leading-relaxed">
-              Short clips of a few MB save best. If your phone storage is full, delete old voices first.
+              {st('vTip')}
             </p>
           </div>
         </div>

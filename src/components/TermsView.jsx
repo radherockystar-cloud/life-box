@@ -2,6 +2,7 @@ import React from 'react';
 import { FileText, AlertCircle } from 'lucide-react';
 import { translations } from '../utils/translations';
 import LegalDoc from './LegalDoc';
+import { useScreenT } from '../utils/screenTexts';
 
 const EMAIL = 'lifeboxapp.dev@gmail.com';
 
@@ -110,6 +111,7 @@ const SECTIONS = [
 
 export default function TermsView({ currentTheme, currentLang }) {
   const t = translations[currentLang] || translations.en;
+  const { st, lang } = useScreenT();
   return (
     <LegalDoc
       dark={currentTheme === 'dark'}
@@ -118,10 +120,11 @@ export default function TermsView({ currentTheme, currentLang }) {
       iconColor="#d97706"
       title={t.terms}
       badgeIcon={AlertCircle}
-      badge="User Guidelines & Agreement"
+      badge={st('zTermsBadge')}
       badgeColor="#d97706"
       updated="18 October 2026"
       intro="Please read these Terms & Conditions carefully before using Life Box. They set out the rules for using the App."
+      noteLegal
       sections={SECTIONS}
     />
   );

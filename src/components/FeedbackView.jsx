@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MessageSquarePlus, Send, Star, CheckCircle2, Loader2 } from 'lucide-react';
 import { translations } from '../utils/translations';
 import { appStorage } from '../utils/appStorage';
+import { useScreenT } from '../utils/screenTexts';
 
 // Feedback seedha developer ke inbox mein jaata hai (form-to-email service).
 // Developer ka email app mein kahin nahi hai, sirf ek access key hai (.env: VITE_FEEDBACK_KEY).
@@ -11,6 +12,8 @@ const CATEGORIES = ['Suggestion', 'Bug', 'Compliment', 'Other'];
 
 export default function FeedbackView({ currentTheme, currentLang }) {
   const t = translations[currentLang] || translations.en;
+  const { st } = useScreenT();
+  const CAT_LABEL = { Suggestion: st('zFbSuggestion'), Bug: st('zFbBug'), Compliment: st('zFbCompliment'), Other: st('zFbOther') };
   const dark = currentTheme === 'dark';
   const [rating, setRating] = useState(5);
   const [category, setCategory] = useState('Suggestion');
@@ -40,7 +43,7 @@ export default function FeedbackView({ currentTheme, currentLang }) {
     setError('');
 
     if (message.trim().length < 10) {
-      setError('Please write a little more (at least 10 characters).');
+      setError(st('zFbShort'));
       return;
     }
     let last = 0;
@@ -50,11 +53,11 @@ export default function FeedbackView({ currentTheme, currentLang }) {
       last = 0;
     }
     if (Date.now() - last < 30000) {
-      setError('Please wait a few seconds before sending again.');
+      setError(st('zFbWait'));
       return;
     }
     if (!FEEDBACK_KEY) {
-      setError("Feedback isn't available right now. Please contact us from Help & Contact.");
+      setError(st('zFbNA'));
       return;
     }
 
@@ -87,11 +90,11 @@ export default function FeedbackView({ currentTheme, currentLang }) {
         setStatus('sent');
       } else {
         setStatus('idle');
-        setError("We couldn't send your feedback. Please try again in a moment.");
+        setError(st('zFbFail'));
       }
     } catch (err) {
       setStatus('idle');
-      setError("Couldn't send. Please check your internet connection and try again.");
+      setError(st('zFbNet'));
     }
   };
 
@@ -106,18 +109,18 @@ export default function FeedbackView({ currentTheme, currentLang }) {
         {status === 'sent' ? (
           <div style={{ textAlign: 'center', padding: '14px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
             <CheckCircle2 size={44} color="#059669" />
-            <div style={{ fontSize: '16px', fontWeight: '900', color: ink }}>Thank you! ❤️</div>
+            <div style={{ fontSize: '16px', fontWeight: '900', color: ink }}>{st('zFbThanks')}</div>
             <p style={{ fontSize: '12.5px', color: body, lineHeight: '1.7', fontWeight: '600' }}>
-              Your feedback has reached the developer. We read every message and use it to make Life Box better.
+              {st('zFbReached')}
             </p>
             <button type="button" onClick={() => setStatus('idle')} style={{ padding: '10px 18px', borderRadius: '12px', background: '#059669', color: '#fff', border: 'none', fontWeight: '900', cursor: 'pointer' }}>
-              Send another
+              {st('zFbAnother')}
             </button>
           </div>
         ) : (
           <>
             <p style={{ fontSize: '12.5px', color: body, lineHeight: '1.7', fontWeight: '600' }}>
-              Tell us what you love, what is not working, or what you would like to see next. Your feedback is sent privately to the developer.
+              {st('zFbIntro')}
             </p>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
@@ -143,30 +146,30 @@ export default function FeedbackView({ currentTheme, currentLang }) {
                       color: category === c ? '#fff' : body,
                     }}
                   >
-                    {c}
+                    {CAT_LABEL[c]}
                   </button>
                 ))}
               </div>
 
-              <textarea placeholder="Write your feedback..." value={message} onChange={(e) => setMessage(e.target.value)} rows={5} maxLength={2000} style={{ ...field, resize: 'none', lineHeight: '1.6' }} required />
+              <textarea placeholder={st('zFbPh')} value={message} onChange={(e) => setMessage(e.target.value)} rows={5} maxLength={2000} style={{ ...field, resize: 'none', lineHeight: '1.6' }} required />
 
-              <input type="email" placeholder="Your email (optional, only if you want a reply)" value={email} onChange={(e) => setEmail(e.target.value)} style={field} />
+              <input type="email" placeholder={st('zFbEmailPh')} value={email} onChange={(e) => setEmail(e.target.value)} style={field} />
 
               {error && <div style={{ fontSize: '12px', fontWeight: '800', color: '#dc2626' }}>{error}</div>}
 
               <button type="submit" disabled={status === 'sending'} style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#059669', color: '#fff', border: 'none', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: status === 'sending' ? 0.7 : 1 }}>
                 {status === 'sending' ? (
                   <>
-                    <Loader2 size={16} className="animate-spin" /> Sending...
+                    <Loader2 size={16} className="animate-spin" /> {st('zFbSending')}
                   </>
                 ) : (
                   <>
-                    <Send size={16} /> Submit
+                    <Send size={16} /> {st('zFbSubmit')}
                   </>
                 )}
               </button>
               <p style={{ fontSize: '11px', color: dark ? '#9ca3af' : '#6b7280', lineHeight: '1.6', fontWeight: '600', textAlign: 'center' }}>
-                Please don&apos;t include passwords or sensitive information. See our Privacy Policy for how feedback is handled.
+                {st('zFbNote')}
               </p>
             </form>
           </>

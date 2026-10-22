@@ -1,8 +1,13 @@
 import React from 'react';
+import { useScreenT } from '../utils/screenTexts';
+
+const HI_MONTHS = { January: 'जनवरी', February: 'फ़रवरी', March: 'मार्च', April: 'अप्रैल', May: 'मई', June: 'जून', July: 'जुलाई', August: 'अगस्त', September: 'सितंबर', October: 'अक्टूबर', November: 'नवंबर', December: 'दिसंबर' };
 
 // Privacy / Terms / Legal / About: sabke liye ek jaisa professional document layout.
 // Sections ka data har View file mein hai, yahan sirf dikhane ka design hai.
-export default function LegalDoc({ dark, icon: Icon, iconBg, iconColor, title, badgeIcon: BadgeIcon, badge, badgeColor, updated, intro, sections = [], numbered = true, footer }) {
+export default function LegalDoc({ dark, icon: Icon, iconBg, iconColor, title, badgeIcon: BadgeIcon, badge, badgeColor, updated, intro, sections = [], numbered = true, footer, noteLegal = false }) {
+  const { st, lang } = useScreenT();
+  const updatedShown = lang === 'hi' && updated ? updated.replace(/[A-Za-z]+/, (m) => HI_MONTHS[m] || m) : updated;
   const ink = dark ? '#f9fafb' : '#111827';
   const body = dark ? '#d1d5db' : '#4b5563';
   const muted = dark ? '#9ca3af' : '#6b7280';
@@ -22,7 +27,8 @@ export default function LegalDoc({ dark, icon: Icon, iconBg, iconColor, title, b
             {BadgeIcon && <BadgeIcon size={16} />} {badge}
           </div>
         )}
-        {updated && <div style={{ fontSize: '11px', fontWeight: '700', color: muted }}>Last updated: {updated}</div>}
+        {updated && <div style={{ fontSize: '11px', fontWeight: '700', color: muted }}>{st('zLastUpd', { d: updatedShown })}</div>}
+        {noteLegal && st('zLegalNote') && <div style={{ fontSize: '11px', fontWeight: '700', color: muted }}>{st('zLegalNote')}</div>}
         {intro && <p style={{ fontSize: '12.5px', color: body, lineHeight: '1.75', fontWeight: '600' }}>{intro}</p>}
 
         {sections.map((s, i) => (

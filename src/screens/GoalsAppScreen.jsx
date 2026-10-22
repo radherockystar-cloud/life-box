@@ -5,7 +5,6 @@ import { moveToBin } from '../utils/binStorage';
 import { requestSync } from '../tabs/planner/reminderService';
 import GoalDetailScreen from './GoalDetailScreen';
 import {
-  MONTH_NAMES,
   toDateStr,
   parseDate,
   isTimeUnlocked,
@@ -14,6 +13,7 @@ import {
   loadGoals,
 } from '../utils/goalHelpers';
 import { appStorage } from '../utils/appStorage';
+import { useScreenT, tintsOf } from '../utils/screenTexts';
 
 /* =====================================================================
    PART 1  –  GoalsAppScreen.jsx  (purani GoalsAppScreen.jsx ko replace karo)
@@ -27,15 +27,6 @@ const emptyForm = () => ({ title: '', actionTime: '06:35', alertTime: '06:00', s
 /* ---------------------------- screen ---------------------------- */
 
 /* ---------------------------- pink-white glossy glow theme, Notes jaisa (CSS) ---------------------------- */
-
-// Har card ko halka alag pastel rang (Notes jaisa)
-const TINTS = [
-  'linear-gradient(160deg,#ffffff 0%,#ffeaf3 100%)',
-  'linear-gradient(160deg,#ffffff 0%,#fff0e6 100%)',
-  'linear-gradient(160deg,#ffffff 0%,#f5ecff 100%)',
-  'linear-gradient(160deg,#ffffff 0%,#e9f9f0 100%)',
-  'linear-gradient(160deg,#ffffff 0%,#e8f3ff 100%)',
-];
 
 const THEME_CSS = `
 /* ====== pink-white glossy glow theme (Notes / Memories jaisa) ======
@@ -126,9 +117,37 @@ const THEME_CSS = `
 @keyframes gx-twinkle{0%,100%{opacity:.7;transform:scale(1) rotate(0);}50%{opacity:1;transform:scale(1.2) rotate(12deg);}}
 @keyframes gx-blink{0%,100%{opacity:1;}50%{opacity:.7;}}
 @media (prefers-reduced-motion:reduce){.gx-root *{animation:none !important;}}
+
+/* ---- Dark theme (Settings me dark chunne par) ---- */
+[data-theme="dark"] .gx-root{color:#f9fafb;
+  --g-bg:linear-gradient(160deg,#1e293b 0%,#172033 100%);--g-bd:rgba(251,113,133,.25);
+  --g-sh:inset 0 1px 0 rgba(255,255,255,.06),0 10px 22px -10px rgba(0,0,0,.6);}
+[data-theme="dark"] .gx-root .gx-icon,[data-theme="dark"] .gx-root .gx-badge,[data-theme="dark"] .gx-root .gx-input,[data-theme="dark"] .gx-root .gx-ghost,
+[data-theme="dark"] .gx-root .gx-tab,[data-theme="dark"] .gx-root .gx-card,[data-theme="dark"] .gx-root .gx-day{border-top-color:rgba(255,255,255,.1);}
+[data-theme="dark"] .gx-root .gx-bg{background:#0f172a;color:#f9fafb;}
+[data-theme="dark"] .gx-root .gx-title,[data-theme="dark"] .gx-root .gx-num{color:#f9fafb;}
+[data-theme="dark"] .gx-root .gx-muted{color:#fda4af;}
+[data-theme="dark"] .gx-root .gx-input{color:#f9fafb;color-scheme:dark;}
+[data-theme="dark"] .gx-root input::placeholder{color:rgba(253,164,175,.5);}
+[data-theme="dark"] .gx-root .gx-ghost,[data-theme="dark"] .gx-root .gx-tab,[data-theme="dark"] .gx-root .gx-pill{color:#fda4af;}
+[data-theme="dark"] .gx-root .gx-tab-on{color:#fff;}
+[data-theme="dark"] .gx-root .gx-modal{background:#1e293b;}
+[data-theme="dark"] .gx-root .gx-tile,[data-theme="dark"] .gx-root .gx-quote{background:rgba(255,255,255,.06);color:#cbd5e1;}
+[data-theme="dark"] .gx-root .gx-chip-glow{color:#fcd34d;background:rgba(251,191,36,.15);}
+[data-theme="dark"] .gx-root .gx-chip-warn{color:#fca5a5;}
+[data-theme="dark"] .gx-root .gx-chip-mute{color:#fda4af;}
+[data-theme="dark"] .gx-root .gx-day{background:linear-gradient(160deg,#1e293b,#172033);}
+[data-theme="dark"] .gx-root .gx-day-done{background:linear-gradient(160deg,#1e293b 0%,#143229 100%);}
+[data-theme="dark"] .gx-root .gx-day-missed{background:linear-gradient(160deg,#1e293b 0%,#3a1522 100%);}
+[data-theme="dark"] .gx-root .gx-day-open{background:linear-gradient(160deg,#1e293b 0%,#3a2a14 100%);}
+[data-theme="dark"] .gx-root .text-\\[\\#3b0f24\\]{color:#f9fafb;}
+[data-theme="dark"] .gx-root .text-\\[\\#be123c\\],[data-theme="dark"] .gx-root .text-\\[\\#a8466c\\],[data-theme="dark"] .gx-root .text-\\[\\#a8264f\\]{color:#fda4af;}
+[data-theme="dark"] .gx-root .text-\\[\\#6f2f4b\\]{color:#cbd5e1;}
 `;
 
 export default function GoalsAppScreen({ onBack }) {
+  const { c, st, loc } = useScreenT();
+  const TINTS = tintsOf(c);
   // NOTE: ab koi default "Gym" goal nahi hai, isliye delete ke baad wapas nahi aayega
   const [goals, setGoals] = useState(loadGoals);
 
@@ -167,16 +186,16 @@ export default function GoalsAppScreen({ onBack }) {
     const goal = goals.find((g) => g.id === goalId);
     if (!goal || goal.completed) return false;
     if (dateStr !== toDateStr()) {
-      showToast('🔒 Only today can be logged.');
+      showToast(st('gTOnlyToday'));
       return false;
     }
     if (!isTimeUnlocked(goal.actionTime)) {
-      showToast(`🔒 This goal opens today at ${goal.actionTime}.`);
+      showToast(st('gTOpens', { t: goal.actionTime }));
       return false;
     }
     if (goal.daysData?.[dateStr]) return false;
     if (!note.trim()) {
-      showToast('✍️ Write a short note about today.');
+      showToast(st('gTNote'));
       return false;
     }
     setGoals((prev) =>
@@ -192,22 +211,22 @@ export default function GoalsAppScreen({ onBack }) {
           : g
       )
     );
-    showToast('✅ Progress saved. Keep going!');
+    showToast(st('gTSaved'));
     return true;
   };
 
   const handleSave = () => {
     const title = form.title.trim();
     if (!title) {
-      showToast('✍️ Give your goal a name.');
+      showToast(st('gTName'));
       return;
     }
     if (!form.actionTime || !form.alertTime) {
-      showToast('⏰ Choose both times.');
+      showToast(st('gTTimes'));
       return;
     }
     if (form.alertTime >= form.actionTime) {
-      showToast('⚠️ Reminder time must be earlier than the unlock time.');
+      showToast(st('gTEarlier'));
       return;
     }
     const entry = {
@@ -226,7 +245,7 @@ export default function GoalsAppScreen({ onBack }) {
     setIsEditing(false);
     setForm(emptyForm());
     setTab('active');
-    showToast('🎯 Goal created. Your first day is waiting.');
+    showToast(st('gTCreated'));
   };
 
   const performDelete = (id) => {
@@ -235,12 +254,12 @@ export default function GoalsAppScreen({ onBack }) {
     moveToBin(item, 'newlife_vault'); // Bin me jata hai, restore par wapas Goals me aayega
     setGoals((prev) => prev.filter((g) => g.id !== id));
     setActiveId(null);
-    showToast('🗑️ Goal moved to Bin.');
+    showToast(st('gTBin'));
   };
 
   const performComplete = (id) => {
     setGoals((prev) => prev.map((g) => (g.id === id ? { ...g, completed: true, completedAt: toDateStr() } : g)));
-    showToast('🏆 Goal completed. Reminders are off.');
+    showToast(st('gTDone'));
   };
 
   const requestDelete = (id, e) => {
@@ -283,8 +302,8 @@ export default function GoalsAppScreen({ onBack }) {
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h2 className="gx-title text-[21px]">Life Box Goals</h2>
-              <p className="gx-muted mt-0.5 text-[11.5px] font-bold">Small days, built into big streaks</p>
+              <h2 className="gx-title text-[21px]">{st('gTitle')}</h2>
+              <p className="gx-muted mt-0.5 text-[11.5px] font-bold">{st('gSub')}</p>
             </div>
           </div>
           <div className="gx-badge">
@@ -297,7 +316,7 @@ export default function GoalsAppScreen({ onBack }) {
           <Search size={18} className="shrink-0 text-[#f43f5e]" />
           <input
             type="text"
-            placeholder="Search goals..."
+            placeholder={st('gSearch')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-transparent text-[13px] font-bold text-[#3b0f24] outline-none placeholder:text-[rgba(190,24,93,0.4)]"
@@ -307,8 +326,8 @@ export default function GoalsAppScreen({ onBack }) {
         {/* tabs */}
         <div className="gx-tabs">
           {[
-            { key: 'active', label: `Active (${activeCount})` },
-            { key: 'completed', label: `Completed (${completedCount})` },
+            { key: 'active', label: st('gActive', { n: activeCount }) },
+            { key: 'completed', label: st('gDoneTab', { n: completedCount }) },
           ].map((t) => (
             <button
               key={t.key}
@@ -327,9 +346,9 @@ export default function GoalsAppScreen({ onBack }) {
             <div className="gx-muted mt-2 text-sm font-bold leading-relaxed">
               {tab === 'active'
                 ? goals.length === 0
-                  ? 'No goals yet. Tap + and start your first streak.'
-                  : 'No active goals match your search.'
-                : 'Finished goals will show up here.'}
+                  ? st('gNone')
+                  : st('gNoMatch')
+                : st('gFinished')}
             </div>
           </div>
         ) : (
@@ -351,7 +370,7 @@ export default function GoalsAppScreen({ onBack }) {
                   <div>
                     <div className="flex items-center justify-between gap-1">
                       <span className="gx-pill">
-                        {MONTH_NAMES[sd.getMonth()].slice(0, 3)} {sd.getFullYear()}
+                        {sd.toLocaleDateString(loc, { month: 'short' })} {sd.getFullYear()}
                       </span>
                       <span className="flex items-center gap-1 text-[11px] font-bold text-[#a8466c]">
                         <Clock size={11} /> {item.actionTime}
@@ -363,19 +382,19 @@ export default function GoalsAppScreen({ onBack }) {
                   <div className="mt-3 space-y-2.5">
                     {item.completed ? (
                       <div className="gx-chip gx-chip-glow">
-                        <Trophy size={12} /> Completed
+                        <Trophy size={12} /> {st('gCompleted')}
                       </div>
                     ) : missed > 0 ? (
                       <div className="gx-chip gx-chip-warn">
-                        ⚠️ {missed} {missed === 1 ? 'day' : 'days'} missed
+                        {st(missed === 1 ? 'gMissed1' : 'gMissedN', { n: missed })}
                       </div>
                     ) : stats.streak > 0 ? (
                       <div className="gx-chip gx-chip-glow">
-                        <Flame size={12} /> {stats.streak}-day streak
+                        <Flame size={12} /> {st('gStreak', { n: stats.streak })}
                       </div>
                     ) : (
                       <div className="gx-chip gx-chip-mute">
-                        <Lock size={12} /> Ready when it opens
+                        <Lock size={12} /> {st('gReady')}
                       </div>
                     )}
 
@@ -385,7 +404,7 @@ export default function GoalsAppScreen({ onBack }) {
 
                     <div className="flex items-center justify-between border-t border-[rgba(251,113,133,0.2)] pt-2">
                       <span className="text-[11px] font-extrabold text-[#a8264f]">
-                        Done: {stats.done}/{stats.elapsed}
+                        {st('gDoneCount', { a: stats.done, b: stats.elapsed })}
                       </span>
                       <div className="flex items-center gap-1.5">
                         {!item.completed && (
@@ -444,21 +463,21 @@ export default function GoalsAppScreen({ onBack }) {
               <button onClick={() => setIsEditing(false)} aria-label="Back" className="gx-icon">
                 <ArrowLeft size={20} />
               </button>
-              <h3 className="gx-title flex-1 text-center text-[15px]">New goal</h3>
+              <h3 className="gx-title flex-1 text-center text-[15px]">{st('gNew')}</h3>
               <button
                 onClick={handleSave}
                 className="gx-primary flex h-11 items-center gap-1.5 px-[18px] text-[13px]"
               >
-                <Save size={16} /> Save
+                <Save size={16} /> {st('save')}
               </button>
             </div>
 
             <div className="space-y-5">
               <div className="space-y-2">
-                <label className="text-xs font-extrabold text-[#a8264f]">What do you want to do every day?</label>
+                <label className="text-xs font-extrabold text-[#a8264f]">{st('gWhat')}</label>
                 <input
                   type="text"
-                  placeholder="e.g. Gym at 6:35 AM"
+                  placeholder={st('gWhatPh')}
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   className="gx-input w-full px-[18px] py-[15px] text-base font-black outline-none"
@@ -466,29 +485,29 @@ export default function GoalsAppScreen({ onBack }) {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-extrabold text-[#a8264f]">Unlock time</label>
+                <label className="text-xs font-extrabold text-[#a8264f]">{st('gUnlock')}</label>
                 <input
                   type="time"
                   value={form.actionTime}
                   onChange={(e) => setForm({ ...form, actionTime: e.target.value })}
                   className="gx-input w-full p-3.5 text-sm font-bold outline-none"
                 />
-                <p className="gx-muted text-[11px] font-semibold">Your daily log opens at this time, not a minute earlier.</p>
+                <p className="gx-muted text-[11px] font-semibold">{st('gUnlockSub')}</p>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-extrabold text-[#a8264f]">Prep reminder</label>
+                <label className="text-xs font-extrabold text-[#a8264f]">{st('gPrep')}</label>
                 <input
                   type="time"
                   value={form.alertTime}
                   onChange={(e) => setForm({ ...form, alertTime: e.target.value })}
                   className="gx-input w-full p-3.5 text-sm font-bold outline-none"
                 />
-                <p className="gx-muted text-[11px] font-semibold">A phone notification to get you ready. Must be earlier than the unlock time.</p>
+                <p className="gx-muted text-[11px] font-semibold">{st('gPrepSub')}</p>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-extrabold text-[#a8264f]">Start date</label>
+                <label className="text-xs font-extrabold text-[#a8264f]">{st('gStart')}</label>
                 <input
                   type="date"
                   min={toDateStr()}
@@ -496,11 +515,11 @@ export default function GoalsAppScreen({ onBack }) {
                   onChange={(e) => setForm({ ...form, startDate: e.target.value })}
                   className="gx-input w-full p-3.5 text-sm font-bold outline-none"
                 />
-                <p className="gx-muted text-[11px] font-semibold">The goal keeps running month after month until you finish it.</p>
+                <p className="gx-muted text-[11px] font-semibold">{st('gStartSub')}</p>
               </div>
 
               <div className="gx-card gx-card-glow p-4 text-xs font-semibold leading-relaxed text-[#6f2f4b]">
-                You will get a prep reminder at {form.alertTime || '--:--'}, the log unlocks at {form.actionTime || '--:--'}, and if you skip a day you will get a missed alert at 11:55 PM.
+                {st('gInfo', { a: form.alertTime || '--:--', b: form.actionTime || '--:--' })}
               </div>
             </div>
           </div>
@@ -523,22 +542,22 @@ export default function GoalsAppScreen({ onBack }) {
               {confirm.type === 'complete' ? <Trophy size={22} /> : <Trash2 size={22} />}
             </div>
             <h4 className="gx-title text-lg">
-              {confirm.type === 'complete' ? 'Finish this goal?' : 'Delete this goal?'}
+              {confirm.type === 'complete' ? st('gFinishQ') : st('gDeleteQ')}
             </h4>
             <p className="gx-muted mt-1.5 text-sm font-semibold leading-relaxed">
               {confirm.type === 'complete'
-                ? 'Daily unlock, missed banners and reminders will stop. Your history stays saved under Completed.'
-                : 'It moves to your Bin. Daily unlock and reminders will stop.'}
+                ? st('gFinishSub')
+                : st('gDeleteSub')}
             </p>
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button onClick={() => setConfirm(null)} className="gx-ghost py-3 text-sm">
-                Cancel
+                {st('cancel')}
               </button>
               <button
                 onClick={runConfirm}
                 className={`py-3 text-sm ${confirm.type === 'complete' ? 'gx-gold' : 'gx-primary'}`}
               >
-                {confirm.type === 'complete' ? 'Finish' : 'Delete'}
+                {confirm.type === 'complete' ? st('gFinish') : st('delete')}
               </button>
             </div>
           </div>

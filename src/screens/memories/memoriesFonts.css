@@ -1,0 +1,11 @@
+/* Memory book ke text styles ke fonts (sab open-source, SIL OFL licence).
+   App ke andar hi bundle hain, internet ki zarurat nahi. */
+@font-face { font-family: 'LBLora'; src: url('./fonts/lora-italic.woff') format('woff'); font-style: italic; font-weight: 400 700; font-display: swap; }
+@font-face { font-family: 'LBHand'; src: url('./fonts/handwritten.woff') format('woff'); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'LBYoung'; src: url('./fonts/youngserif.woff') format('woff'); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'LBMono'; src: url('./fonts/plexmono.woff') format('woff'); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'LBOutfit'; src: url('./fonts/outfit.woff') format('woff'); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'LBCrimson'; src: url('./fonts/crimson-italic.woff') format('woff'); font-style: italic; font-weight: 200 900; font-display: swap; }
+@font-face { font-family: 'LBInstrument'; src: url('./fonts/instrument-italic.woff') format('woff'); font-style: italic; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'LBItaliana'; src: url('./fonts/italiana.woff') format('woff'); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: 'LBPoiret'; src: url('./fonts/poiret.woff') format('woff'); font-style: normal; font-weight: 400; font-display: swap; }

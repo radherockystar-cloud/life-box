@@ -237,12 +237,15 @@ export default function PlannerTab() {
   const daysText = (days) => (days === 0 ? tx.planTodayBang : days === 1 ? tx.planTomorrow : days > 1 ? fmt(tx.planInDays, { n: days }) : tx.planPassed);
 
   return (
-    <div className="pb-28">
+    <div className="pb-28" style={{ overflowX: 'clip', maxWidth: '100%' }}>
       <div style={{ position: 'relative', padding: '4px 2px 22px', color: INK }}>
         {/* Soft colour glows behind the cards (blur nahi, sirf halka gradient) */}
+        {/* Glow ko apne dabbe ke andar rok diya (pehle ye screen se bahar nikalkar side-scroll karata tha) */}
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
         <div style={{ position: 'absolute', top: '-60px', right: '-50px', width: '230px', height: '230px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(244,114,182,0.30), transparent 70%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: '120px', left: '-70px', width: '230px', height: '230px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(251,113,133,0.25), transparent 70%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: '-60px', right: '-40px', width: '210px', height: '210px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(253,224,71,0.30), transparent 70%)', pointerEvents: 'none' }} />
+        </div>
 
         <div style={{ position: 'relative' }}>
           {/* Header */}

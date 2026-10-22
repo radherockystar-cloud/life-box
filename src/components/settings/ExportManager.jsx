@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Download, Sparkles, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { buildBackupBlob } from '../../utils/dataBackup';
+import { isNative, shareBlobNative } from '../../utils/nativeFile';
 
 export default function ExportManager({ currentTheme }) {
   const [busy, setBusy] = useState(false);
@@ -11,17 +12,25 @@ export default function ExportManager({ currentTheme }) {
     try {
       // Everything the app keeps on this phone (all tabs, notes, bin, settings, profile...) + photos, videos, voices
       const { blob, items, media } = await buildBackupBlob();
-      const url = URL.createObjectURL(blob);
+      const fileName = `NewLife_Backup_${new Date().toISOString().slice(0, 10)}.json`;
 
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.href = url;
-      downloadAnchor.download = `NewLife_Backup_${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-
-      alert(`All App Data Exported Successfully (${items} items, ${media} photos/videos/voices)! 📥✨`);
+      if (isNative()) {
+        // Android app: WebView me <a download> kaam nahi karta, isliye file phone me likh kar share sheet kholte hain
+        // (wahan se "Drive", "Files" ya koi bhi jagah chunkar save kar lo).
+        const opened = await shareBlobNative(blob, fileName, { title: 'Life Box Backup', dialogTitle: 'Save backup file' });
+        if (opened) alert(`Backup ready (${items} items, ${media} photos/videos/voices). Choose where to save it: Drive, Files, etc. 📥✨`);
+      } else {
+        // Browser (npm run dev): seedha download
+        const url = URL.createObjectURL(blob);
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.href = url;
+        downloadAnchor.download = fileName;
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        alert(`All App Data Exported Successfully (${items} items, ${media} photos/videos/voices)! 📥✨`);
+      }
     } catch (err) {
       alert('Export nahi ho paya: ' + err.message);
     } finally {

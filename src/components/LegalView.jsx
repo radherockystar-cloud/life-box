@@ -2,6 +2,7 @@ import React from 'react';
 import { Scale, ShieldCheck } from 'lucide-react';
 import { translations } from '../utils/translations';
 import LegalDoc from './LegalDoc';
+import { useScreenT } from '../utils/screenTexts';
 
 const EMAIL = 'lifeboxapp.dev@gmail.com';
 
@@ -63,6 +64,7 @@ const SECTIONS = [
 
 export default function LegalView({ currentTheme, currentLang }) {
   const t = translations[currentLang] || translations.en;
+  const { st, lang } = useScreenT();
   return (
     <LegalDoc
       dark={currentTheme === 'dark'}
@@ -71,9 +73,10 @@ export default function LegalView({ currentTheme, currentLang }) {
       iconColor="#9333ea"
       title={t.legal}
       badgeIcon={ShieldCheck}
-      badge="Intellectual Property & Services"
+      badge={st('zLegalBadge')}
       badgeColor="#9333ea"
       updated="18 October 2026"
+      noteLegal
       sections={SECTIONS}
     />
   );
